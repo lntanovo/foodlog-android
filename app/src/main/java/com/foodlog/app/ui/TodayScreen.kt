@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,15 +18,17 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.foodlog.app.domain.*
+import java.math.BigDecimal
 import java.time.LocalDate
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable fun TodayScreen(vm: AppViewModel, data: Dataset, date: String) {
     var bodyDialog by rememberSaveable(date) { mutableStateOf(false) }
     var secondary by rememberSaveable { mutableStateOf(false) }
     var templatesDialog by rememberSaveable(date) { mutableStateOf(false) }
     var copyDialog by rememberSaveable(date) { mutableStateOf(false) }
     var templateMealId by rememberSaveable(date) { mutableStateOf<String?>(null) }
+    val dietDayBusy by vm.dietDayBusy.collectAsState()
+    val dietDayError by vm.dietDayError.collectAsState()
     val meals = data.meals.filter { it.date == date }
     val day = data.days.find { it.date == date } ?: DayLog(date)
     val body = data.bodies.find { it.date == date }
@@ -36,22 +40,26 @@ import java.time.LocalDate
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
-            Modifier.widthIn(max = 720.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            Modifier.widthIn(max = 720.dp).fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 8.dp).testTag("today-content"),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text("食记", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text("认真记录，自在吃饭", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { vm.date(LocalDate.parse(date).minusDays(1).toString()) }) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "前一天", modifier = Modifier.size(20.dp))
                 }
-                TextButton(onClick = { vm.today() }, modifier = Modifier.heightIn(min = 48.dp)) { Text("回到今天") }
+                DateButton(date, vm::date, Modifier.weight(1f).heightIn(min = 48.dp))
+                IconButton(onClick = { vm.date(LocalDate.parse(date).plusDays(1).toString()) }) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = "后一天", modifier = Modifier.size(20.dp))
+                }
+                TextButton(onClick = { vm.today() }, modifier = Modifier.heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 6.dp)) {
+                    Text("回到今天", style = MaterialTheme.typography.labelLarge)
+                }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { vm.date(LocalDate.parse(date).minusDays(1).toString()) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("前一天") }
-                DateButton(date, vm::date, Modifier.heightIn(min = 48.dp))
-                TextButton(onClick = { vm.date(LocalDate.parse(date).plusDays(1).toString()) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("后一天") }
-            }
-            TodayNutritionOverview(total, target, complete, secondary) { secondary = !secondary }
+            TodayNutritionOverview(
+                total, target, effectiveDietDayType(day), complete, secondary, dietDayBusy, dietDayError,
+                vm::selectDietDayType, { vm.tab(3) }, { secondary = !secondary }
+            )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(onClick = { templatesDialog = true }, modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("常用餐入口")) {
                     Icon(Icons.Outlined.Restaurant, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -63,49 +71,22 @@ import java.time.LocalDate
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("餐食记录", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text("餐食", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Text("${posted.size} 餐已吃${if (drafts.isNotEmpty()) " · ${drafts.size} 份草稿" else ""}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            drafts.forEach { draft ->
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text("${draft.type}草稿", style = MaterialTheme.typography.titleMedium)
-                        Text("草稿不计入摄入${if (draft.replacesMealId != null) " · 正在修改已有餐食" else ""}", style = MaterialTheme.typography.bodySmall)
-                        Text(draft.items.joinToString("、") { it.snapshot.name }.ifBlank { "尚未选择食品" }, style = MaterialTheme.typography.bodyMedium)
-                        if (draft.note.contains("复制自 ")) Text(draft.note, style = MaterialTheme.typography.bodySmall)
-                        Row {
-                            TextButton(onClick = { vm.edit(draft) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("继续填写") }
-                            TextButton(onClick = { vm.delete(draft) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("丢弃草稿") }
-                        }
+            drafts.forEach { draft -> TodayDraftCard(draft, { vm.edit(draft) }, { vm.delete(draft) }) }
+            if (posted.isEmpty() && drafts.isEmpty()) {
+                OutlinedCard(Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("还没有餐食记录", style = MaterialTheme.typography.titleMedium)
+                        Text("记下食品与份量，对照当天参考值。", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(onClick = { vm.edit() }, modifier = Modifier.heightIn(min = 48.dp).align(Alignment.End)) { Text("记一餐") }
                     }
                 }
             }
-            mealTypes.filter { it != "早餐" || meals.any { meal -> meal.type == it } }.forEach { type ->
-                val entries = posted.filter { it.type == type }
-                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                    Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(type, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            if (entries.isEmpty()) Text("未记录", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        entries.forEachIndexed { index, meal ->
-                            if (index > 0) HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                            meal.items.forEach { item ->
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-                                    Text(item.snapshot.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                                    Text(item.quantity?.let { "${display(it)} ${if (item.unit == "G") "g" else if (item.unit == "ML") "ml" else item.unit}${if (item.quantityStatus == "ESTIMATED") "（估算）" else ""}" } ?: "份量待补", style = MaterialTheme.typography.bodyMedium)
-                                }
-                            }
-                            val sum = NutritionCalculator.aggregate(meal.items)
-                            Text("${sum[0].label(" kcal")} · P ${sum[1].label()} / C ${sum[2].label()} / F ${sum[3].label()}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                            if (meal.note.isNotBlank()) Text(meal.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                TextButton(onClick = { vm.edit(meal) }, modifier = Modifier.heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 10.dp)) { Text("编辑") }
-                                TextButton(onClick = { templateMealId = meal.id }, modifier = Modifier.heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 10.dp)) { Text("存为常用餐") }
-                                TextButton(onClick = { vm.delete(meal) }, modifier = Modifier.heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 10.dp)) { Text("删除", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                            }
-                        }
-                    }
+            mealTypes.forEach { type ->
+                posted.filter { it.type == type }.forEach { meal ->
+                    TodayMealCard(meal, { vm.edit(meal) }, { templateMealId = meal.id }, { vm.delete(meal) })
                 }
             }
             OutlinedCard(onClick = { bodyDialog = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
@@ -117,12 +98,11 @@ import java.time.LocalDate
                     Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = "记录晨重、腰围与训练", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 }
             }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(complete, { checked -> vm.launch { vm.repo.day(day.copy(loggingStatus = if (checked) "COMPLETE" else if (posted.isEmpty()) "UNKNOWN" else "PARTIAL")) } })
-                Column {
-                    Text("今天已记录完整", style = MaterialTheme.typography.bodyMedium)
-                    Text("确认前，摄入仅代表已记录部分", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            Column {
+                CheckRow("今天已记录完整", complete, { checked ->
+                    vm.launch { vm.repo.updateLoggingStatus(date, if (checked) "COMPLETE" else if (posted.isEmpty()) "UNKNOWN" else "PARTIAL") }
+                })
+                if (!complete) Text("摄入仅代表已记录部分", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 48.dp))
             }
             Spacer(Modifier.height(86.dp))
         }
@@ -133,41 +113,143 @@ import java.time.LocalDate
     templateMealId?.let { id -> data.meals.find { it.id == id }?.let { meal -> SaveMealTemplateDialog(vm, meal) { templateMealId = null } } }
 }
 
-@Composable private fun TodayNutritionOverview(totals: List<MetricTotal>, target: DayTarget?, complete: Boolean, secondary: Boolean, toggleSecondary: () -> Unit) {
+@Composable private fun TodayNutritionOverview(
+    totals: List<MetricTotal>, target: DayTarget?, dayType: String?, complete: Boolean,
+    secondary: Boolean, busy: Boolean, error: String?, selectDayType: (String) -> Unit,
+    openQuota: () -> Unit, toggleSecondary: () -> Unit
+) {
+    val referenceType = when (val type = target?.dayType) {
+        "STRENGTH", "BADMINTON", "BOTH" -> "TRAINING"
+        "TRAINING", "REST", "FLEX" -> type
+        else -> null
+    }
     Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("已记录摄入", style = MaterialTheme.typography.titleSmall)
-                Text(if (complete) "全天记录完整" else "全天尚未确认完整", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
-            val energy = totals[0]
-            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text(energy.known?.let { "${if (energy.missing > 0) "已知 " else ""}${display(it)}" } ?: if (energy.count == 0) "未记录" else "待补", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                if (energy.known != null) Text("kcal", modifier = Modifier.padding(bottom = 5.dp), style = MaterialTheme.typography.bodyMedium)
-            }
-            if (energy.missing > 0) Text("${energy.missing} 项热量待补", style = MaterialTheme.typography.bodySmall)
-            if (target != null) {
-                val goal = target.nutrients.kcal
-                Text("${trainingLabels[target.dayType]}日目标 ${goal?.let { "${display(it)} kcal" } ?: "待补"} · 已固定本日快照", style = MaterialTheme.typography.bodySmall)
-                if (complete && energy.complete && goal != null) {
-                    val delta = goal.toBigDecimal() - energy.known!!.toBigDecimal()
-                    Text(if (delta.signum() >= 0) "与目标差额 ${display(delta.toPlainString())} kcal" else "超出目标 ${display(delta.abs().toPlainString())} kcal", style = MaterialTheme.typography.bodySmall)
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                dietDayTypeLabels.forEach { (value, label) ->
+                    FilterChip(
+                        selected = dayType == value,
+                        onClick = { if (dayType != value || referenceType != value) selectDayType(value) },
+                        enabled = !busy,
+                        label = { Text(label) },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("日型_$value")
+                    )
                 }
-            } else Text("尚无本日设定目标", style = MaterialTheme.typography.bodySmall)
+            }
+            if (referenceType != null && referenceType != dayType) {
+                Text("参考快照：${dietDayTypeLabels[referenceType]} · 点日型更新", style = MaterialTheme.typography.bodySmall)
+            }
+            error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("已记录 / 参考", style = MaterialTheme.typography.labelLarge)
+                TextButton(onClick = openQuota, modifier = Modifier.heightIn(min = 48.dp).testTag("首页设置配额"), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                    Text(if (target == null) "设置配额" else "调整配额")
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                listOf("碳水" to 2, "蛋白质" to 1, "脂肪" to 3).forEach { (label, index) ->
+                    TodayMacro(label, totals[index], target?.nutrients?.values()?.get(index), Modifier.weight(1f))
+                }
+            }
+            if (target == null) {
+                Text(
+                    if (dayType == null) "选择日型，再按体重设置每日参考值。" else "${dietDayTypeLabels[dayType]}尚未设置参考值。",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
             HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = .12f))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                listOf("蛋白质" to 1, "碳水" to 2, "脂肪" to 3).forEach { (label, index) ->
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(label, style = MaterialTheme.typography.labelMedium)
-                        Text(totals[index].label(" g"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        target?.nutrients?.values()?.get(index)?.let { Text("目标 ${display(it)} g", style = MaterialTheme.typography.labelSmall) }
+            val energy = totals[0]
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("热量 ${energy.label(" kcal")}${target?.nutrients?.kcal?.let { " · 参考 ${display(it)} kcal" } ?: ""}", style = MaterialTheme.typography.bodySmall)
+                Text(if (complete) "全天已记录完整" else "仅已记录部分 · 尚未确认全天完整", style = MaterialTheme.typography.labelSmall)
+            }
+            if (secondary) {
+                Text("钠：${totals[4].label(" mg")}\n膳食纤维：${totals[5].label(" g")}", style = MaterialTheme.typography.bodySmall)
+                Text("热量按食品标签或碳蛋脂换算，部分食品为估算值。", style = MaterialTheme.typography.bodySmall)
+            }
+            TextButton(onClick = toggleSecondary, modifier = Modifier.heightIn(min = 48.dp).align(Alignment.End), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                Text(if (secondary) "收起更多营养" else "更多营养", style = MaterialTheme.typography.labelLarge)
+            }
+        }
+    }
+}
+
+@Composable private fun RowScope.TodayMacro(label: String, total: MetricTotal, reference: String?, modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text(label, style = MaterialTheme.typography.labelLarge)
+        Text(
+            total.known?.let { "${if (total.missing > 0) "已知 " else ""}${display(it)}" } ?: if (total.count == 0) "未记录" else "待补",
+            style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+            modifier = Modifier.testTag("首页_${label}_已记录")
+        )
+        Text("/ ${reference?.let { display(it) } ?: "—"} g", style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("首页_${label}_参考"))
+        val goal = reference?.toBigDecimalOrNull()
+        val amount = total.known?.toBigDecimalOrNull()
+        if (goal != null && goal > BigDecimal.ZERO && amount != null) {
+            LinearProgressIndicator(
+                progress = { amount.divide(goal, precision).toFloat().coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(4.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = .12f),
+                drawStopIndicator = {}
+            )
+        }
+        if (total.missing > 0) Text("${total.missing} 项待补", style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable private fun TodayDraftCard(draft: Meal, edit: () -> Unit, delete: () -> Unit) {
+    var menu by remember(draft.id) { mutableStateOf(false) }
+    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("${draft.type}草稿", style = MaterialTheme.typography.titleMedium)
+                    Text(if (draft.replacesMealId != null) "修改中 · 原记录仍计入摄入" else "未计入摄入", style = MaterialTheme.typography.bodySmall)
+                }
+                TextButton(onClick = edit, modifier = Modifier.heightIn(min = 48.dp)) { Text("继续填写") }
+                Box {
+                    IconButton(onClick = { menu = true }, modifier = Modifier.testTag("draft-more-${draft.id}")) {
+                        Icon(Icons.Outlined.MoreVert, contentDescription = "更多草稿操作")
+                    }
+                    DropdownMenu(menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(text = { Text("丢弃草稿") }, onClick = { menu = false; delete() })
                     }
                 }
             }
-            if (secondary) Text("钠：${totals[4].label(" mg")}\n膳食纤维：${totals[5].label(" g")}", style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = toggleSecondary, modifier = Modifier.heightIn(min = 48.dp).align(Alignment.End), contentPadding = PaddingValues(horizontal = 4.dp)) {
-                Text(if (secondary) "收起钠与纤维" else "钠与膳食纤维", style = MaterialTheme.typography.labelLarge)
+            Text(draft.items.joinToString("、") { it.snapshot.name }.ifBlank { "尚未选择食品" }, style = MaterialTheme.typography.bodyMedium)
+            if (draft.note.isNotBlank()) Text(draft.note, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable private fun TodayMealCard(meal: Meal, edit: () -> Unit, saveTemplate: () -> Unit, delete: () -> Unit) {
+    var menu by remember(meal.id) { mutableStateOf(false) }
+    val total = NutritionCalculator.aggregate(meal.items)
+    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(meal.type, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text(total[0].label(" kcal"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Box {
+                    IconButton(onClick = { menu = true }, modifier = Modifier.testTag("meal-more-${meal.id}")) {
+                        Icon(Icons.Outlined.MoreVert, contentDescription = "更多${meal.type}操作")
+                    }
+                    DropdownMenu(menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(text = { Text("编辑") }, onClick = { menu = false; edit() })
+                        DropdownMenuItem(text = { Text("存为常用餐") }, onClick = { menu = false; saveTemplate() })
+                        DropdownMenuItem(text = { Text("删除") }, onClick = { menu = false; delete() })
+                    }
+                }
             }
+            meal.items.forEach { item ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+                    Text(item.snapshot.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    Text(item.quantity?.let { "${display(it)} ${if (item.unit == "G") "g" else if (item.unit == "ML") "ml" else item.unit}${if (item.quantityStatus == "ESTIMATED") "（估算）" else ""}" } ?: "份量待补", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            Text("碳 ${total[2].label(" g")} · 蛋 ${total[1].label(" g")} · 脂 ${total[3].label(" g")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (meal.note.isNotBlank()) Text(meal.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

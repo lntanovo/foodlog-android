@@ -45,21 +45,21 @@ class FormReliabilityTest {
     }
 
     @Test fun targetModesKeepSeparateInputsAndRecreate() {
-        compose.onNodeWithText("设置").performClick()
-        compose.onNodeWithText("设置训练日 / 休息日目标").performScrollTo().performClick()
-        compose.onAllNodesWithTag("碳水 g")[0].performScrollTo().performTextInput("180.")
+        compose.onNodeWithText("配额").performClick()
+        compose.onNodeWithTag("quota-edit").performScrollTo().performClick()
+        compose.onNodeWithTag("参考体重 kg").performScrollTo().performTextInput("65")
+        compose.onNodeWithTag("碳水 g/kg").performScrollTo().performTextInput("2.7")
         compose.onNodeWithText("直接填写克数").performScrollTo().performClick()
-        compose.onAllNodesWithTag("碳水 g")[0].assertTextContains("180.")
-        compose.onNodeWithText("按参考体重系数").performScrollTo().performClick()
-        compose.onNodeWithTag("目标参考体重 kg（不是晨重）").performScrollTo().performTextInput("65")
-        compose.onAllNodesWithTag("碳水 g/kg")[0].performScrollTo().performTextInput("2.7")
+        compose.onNodeWithTag("碳水 g").performScrollTo().performTextInput("180.")
         compose.onNodeWithText("直接填写克数").performScrollTo().performClick()
-        compose.onAllNodesWithTag("碳水 g")[0].performScrollTo().assertTextContains("180.")
-        recreateWithTag("碳水 g")
-        compose.onAllNodesWithTag("碳水 g")[0].performScrollTo().assertTextContains("180.")
+        compose.onNodeWithTag("碳水 g").performScrollTo().assertTextContains("180.")
         compose.onNodeWithText("按参考体重系数").performScrollTo().performClick()
-        compose.onNodeWithTag("目标参考体重 kg（不是晨重）").performScrollTo().assertTextContains("65")
-        compose.onAllNodesWithTag("碳水 g/kg")[0].performScrollTo().assertTextContains("2.7")
+        compose.onNodeWithTag("参考体重 kg").performScrollTo().assertTextContains("65")
+        compose.onNodeWithTag("碳水 g/kg").performScrollTo().assertTextContains("2.7")
+        recreateWithTag("碳水 g/kg")
+        compose.onNodeWithTag("碳水 g/kg").performScrollTo().assertTextContains("2.7")
+        compose.onNodeWithText("直接填写克数").performScrollTo().performClick()
+        compose.onNodeWithTag("碳水 g").performScrollTo().assertTextContains("180.")
     }
 
     @Test fun bodyAndProfileInputsSurviveRecreate() {

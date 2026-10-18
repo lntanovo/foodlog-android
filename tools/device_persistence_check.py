@@ -2,9 +2,9 @@
 import argparse, hashlib, json, pathlib, re, sqlite3, subprocess, tempfile, time
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--adb',required=True);p.add_argument('--apk',required=True);p.add_argument('--report',required=True);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--adb',required=True);p.add_argument('--apk',required=True);p.add_argument('--report',required=True);p.add_argument('--serial');a=p.parse_args()
     def adb(*args,check=True):
-        return subprocess.run([a.adb,*args],capture_output=True,check=check).stdout
+        return subprocess.run([a.adb,*(['-s',a.serial] if a.serial else []),*args],capture_output=True,check=check).stdout
     def snap():
         adb('shell','am','force-stop','com.foodlog.app')
         with tempfile.TemporaryDirectory() as t:
@@ -19,7 +19,7 @@ def main():
                 result={table:sorted([json.loads(row[0]) for row in db.execute('SELECT json FROM '+table)],key=lambda x:json.dumps(x,sort_keys=True)) for table in tables}
                 schema=db.execute('PRAGMA user_version').fetchone()[0]
                 table_names={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-                templates=db.execute('SELECT count(*) FROM meal_templates').fetchone()[0] if 'meal_templates' in table_names else None
+                templates=sorted([json.loads(row[0]) for row in db.execute('SELECT json FROM meal_templates')],key=lambda x:json.dumps(x,sort_keys=True)) if 'meal_templates' in table_names else None
             finally: db.close()
             return result,schema,templates
     def version():
@@ -34,8 +34,8 @@ def main():
     adb('shell','am','start','-W','-n','com.foodlog.app/.MainActivity');time.sleep(2)
     after,after_schema,after_templates=snap();assert before==after,'Upgrade changed business records'
     assert after_schema==2,(before_schema,after_schema)
-    assert after_templates==(before_templates or 0),'Migration changed template records'
+    assert after_templates==(before_templates or []),'Migration changed template records'
     payload=json.dumps(after,ensure_ascii=False,sort_keys=True).encode()
-    report=dict(beforeVersionCode=before_code,afterVersionCode=after_code,beforeRoomVersion=before_schema,afterRoomVersion=after_schema,templatesTableCreated=after_templates is not None,templateCount=after_templates,forceStopRestartPreserved=True,sameSignatureUpgradePreserved=True,counts={t:len(v) for t,v in after.items()},logicalDataSha256=hashlib.sha256(payload).hexdigest())
+    report=dict(beforeVersionCode=before_code,afterVersionCode=after_code,beforeRoomVersion=before_schema,afterRoomVersion=after_schema,templatesTableCreated=after_templates is not None,templateCount=len(after_templates or []),forceStopRestartPreserved=True,sameSignatureUpgradePreserved=True,counts={t:len(v) for t,v in after.items()},logicalDataSha256=hashlib.sha256(payload).hexdigest())
     pathlib.Path(a.report).write_text(json.dumps(report,indent=2),encoding='utf-8');print(json.dumps(report,indent=2))
 if __name__=='__main__':main()

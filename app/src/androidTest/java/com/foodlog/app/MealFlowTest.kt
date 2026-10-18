@@ -32,6 +32,8 @@ class MealFlowTest {
         compose.waitUntil(15_000){compose.onAllNodesWithContentDescription("记一餐").fetchSemanticsNodes().isNotEmpty()}
         compose.waitUntil(15_000){compose.onAllNodesWithText("已保存这餐").fetchSemanticsNodes().isEmpty()}
         compose.onNodeWithText("荞麦面").performScrollTo().assertExists()
+        val savedMealId=runBlocking{(compose.activity.application as FoodLogApplication).repository.snapshot().meals.single{it.status=="POSTED"}.id}
+        compose.onNodeWithTag("meal-more-$savedMealId").performScrollTo().performClick()
         compose.onNodeWithText("编辑").performScrollTo().performClick()
         compose.waitUntil(10_000){compose.onAllNodesWithTag("meal-content").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithTag("meal-content").performScrollToNode(hasTestTag("本次份量（留空为待补）"))
@@ -39,7 +41,7 @@ class MealFlowTest {
         compose.onNodeWithText("保存已吃").performClick()
         compose.waitUntil(15_000){compose.onAllNodesWithContentDescription("记一餐").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("120 g").performScrollTo().assertExists()
-        compose.onNodeWithText("前一天").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("前一天").performScrollTo().performClick()
         compose.activityRule.scenario.recreate()
         val yesterday=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai")).minusDays(1).toString()
         compose.onNodeWithText(yesterday).assertExists()

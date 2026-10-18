@@ -23,8 +23,8 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
 
 @Composable fun SettingsScreen(vm: AppViewModel, data: Dataset, transfer: TransferViewModel = viewModel()) {
     var profile by rememberSaveable { mutableStateOf(false) }
-    var target by rememberSaveable { mutableStateOf(false) }
     var libraryDialog by rememberSaveable { mutableStateOf(false) }
+    var libraryExpanded by rememberSaveable { mutableStateOf(false) }
     var selected by rememberSaveable(stateSaver = StringSetSaver) { mutableStateOf(emptySet<String>()) }
     var libraryError by rememberSaveable { mutableStateOf<String?>(null) }
     val dark by vm.dark.collectAsState()
@@ -46,7 +46,7 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("设置", style = MaterialTheme.typography.headlineLarge)
-            Text("管理目标、外观和本机数据", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("个人资料、外观与本机备份", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (task != null || transferError != null) Section("文件操作", if (busy) "正在处理，请稍候" else "操作进度会保留，切换页面后可继续") {
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -65,7 +65,7 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
             val plan = data.plans.maxWithOrNull(compareBy<TargetPlan> { it.effectiveFrom }.thenBy { it.createdAt })
             Text(plan?.let { "计划自 ${it.effectiveFrom} 生效 · ${if (it.mode == "PER_KG") "按参考体重系数" else "直接填写碳蛋脂"}" }
                 ?: "可以只记录饮食，也可以设置自己的每日配额。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = { target = true }, modifier = Modifier.fillMaxWidth()) { Text("设置训练日 / 休息日目标") }
+            OutlinedButton(onClick = { vm.tab(3) }, modifier = Modifier.fillMaxWidth()) { Text("配额与每日标签") }
         }
         Section("数据备份与恢复", "完整备份保存在你选择的位置，建议定期导出。") {
             Text("最近完整导出：${data.meta.lastExport?.let { java.time.Instant.parse(it).atZone(ZoneId.of(data.meta.timezone)).toLocalDateTime().toString().replace('T', ' ') } ?: "尚未导出"}", style = MaterialTheme.typography.bodySmall)
@@ -73,7 +73,8 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
             OutlinedButton(enabled = canStart, onClick = { transfer.prepareImport("FULL_BACKUP") }, modifier = Modifier.fillMaxWidth()) { Text("从完整备份恢复…") }
             TextButton(enabled = canStart, onClick = { transfer.prepareExport("食记_恢复前备份.foodlog.gz", recovery = true) }, modifier = Modifier.fillMaxWidth()) { Text("取出最近的恢复前自动备份") }
         }
-        Section("食品库与旧数据") {
+        OutlinedButton(onClick = { libraryExpanded = !libraryExpanded }, modifier = Modifier.fillMaxWidth().heightIn(min=48.dp)) { Text(if(libraryExpanded) "收起食品库与旧数据" else "食品库与旧数据") }
+        if(libraryExpanded) Section("分享与迁移") {
             OutlinedButton(enabled = canStart, onClick = { selected = data.foods.filter { !it.archived }.map { it.id }.toSet(); libraryError = null; libraryDialog = true }, modifier = Modifier.fillMaxWidth()) { Text("选择食品并导出分享文件…") }
             OutlinedButton(enabled = canStart, onClick = { transfer.prepareImport("FOOD_LIBRARY") }, modifier = Modifier.fillMaxWidth()) { Text("导入食品库…") }
             OutlinedButton(enabled = canStart, onClick = { transfer.prepareImport("LEGACY_IMPORT") }, modifier = Modifier.fillMaxWidth()) { Text("导入电脑转换的旧记录…") }
@@ -84,12 +85,11 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
                 Text("深色外观")
                 Switch(dark ?: androidx.compose.foundation.isSystemInDarkTheme(), { vm.theme(it) })
             }
-            Text("食记 1.1.0 · 本地离线版", style = MaterialTheme.typography.titleSmall)
+            Text("食记 1.2.0 · 本地离线版", style = MaterialTheme.typography.titleSmall)
             Text("未知营养留空，真实零值填0；估算信息单独标记。完整备份包含全部文字数据，食品分享文件不包含个人记录。目标均为自设配额。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     if (profile) ProfileDialog(vm, data) { profile = false }
-    if (target) TargetDialog(vm, data) { target = false }
     if (libraryDialog) FormDialog("选择要分享的食品", confirm = "导出所选食品", error = libraryError, dismiss = { libraryDialog = false }, save = {
         if (selected.isEmpty()) libraryError = "请至少选择一种食品"
         else { transfer.prepareExport("食记_食品库.foodlog.gz", library = true, selected = selected); libraryDialog = false }
@@ -183,45 +183,3 @@ private fun dayImportSummary(data: Dataset, date: String, fallback: Dataset? = n
     }
 }
 
-@Composable fun TargetDialog(vm: AppViewModel, data: Dataset, dismiss: () -> Unit) {
-    val old = data.plans.maxWithOrNull(compareBy<TargetPlan> { it.effectiveFrom }.thenBy { it.createdAt })
-    var mode by rememberSaveable { mutableStateOf(old?.mode ?: "DIRECT_MACROS") }
-    var reference by rememberSaveable { mutableStateOf(old?.referenceWeight ?: "") }
-    var effective by rememberSaveable { mutableStateOf(LocalDate.now(ZoneId.of(data.meta.timezone)).toString()) }
-    var direct by rememberSaveable { mutableStateOf(if (old?.mode == "DIRECT_MACROS") listOf(old.training.protein, old.training.carbs, old.training.fat, old.rest.protein, old.rest.carbs, old.rest.fat) else List(6) { "" }) }
-    var perKg by rememberSaveable { mutableStateOf(if (old?.mode == "PER_KG") listOf(old.training.protein, old.training.carbs, old.training.fat, old.rest.protein, old.rest.carbs, old.rest.fat) else List(6) { "" }) }
-    var error by rememberSaveable { mutableStateOf<String?>(null) }
-    val values = if (mode == "PER_KG") perKg else direct
-    fun change(index: Int, value: String) {
-        val next = values.mapIndexed { i, current -> if (i == index) value else current }
-        if (mode == "PER_KG") perKg = next else direct = next
-    }
-    FormDialog("新建自设配额计划", dismiss = dismiss, error = error, save = { runCatching {
-        values.forEach { decimal(it) }
-        if (mode == "PER_KG") decimal(reference.trim(), true)
-        LocalDate.parse(effective)
-        val plan = TargetPlan(effectiveFrom = effective, mode = mode, referenceWeight = if (mode == "PER_KG") reference.trim() else null,
-            training = Macros(values[0].trim(), values[1].trim(), values[2].trim()), rest = Macros(values[3].trim(), values[4].trim(), values[5].trim()))
-        vm.launch { vm.repo.plan(plan); dismiss() }
-    }.onFailure { error = it.message } }) {
-        Text("自行设定的记录配额。两种模式各自保留输入，切换不会换算或清空。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Choices(listOf("直接填写克数", "按参考体重系数"), if (mode == "PER_KG") "按参考体重系数" else "直接填写克数", {
-            mode = if (it == "按参考体重系数") "PER_KG" else "DIRECT_MACROS"
-            error = null
-        })
-        Row(verticalAlignment = Alignment.CenterVertically) { Text("生效日期"); DateButton(effective, { effective = it }) }
-        if (mode == "PER_KG") Field("目标参考体重 kg（不是晨重）", reference, { reference = it }, numeric = true)
-        val unit = if (mode == "PER_KG") "g/kg" else "g"
-        HorizontalDivider()
-        Text("训练日 · 力量 / 羽毛球 / 两练", style = MaterialTheme.typography.titleSmall)
-        Field("碳水 $unit", values[1], { change(1, it) }, numeric = true)
-        Field("蛋白质 $unit", values[0], { change(0, it) }, numeric = true)
-        Field("脂肪 $unit", values[2], { change(2, it) }, numeric = true)
-        HorizontalDivider()
-        Text("休息日", style = MaterialTheme.typography.titleSmall)
-        Field("碳水 $unit", values[4], { change(4, it) }, numeric = true)
-        Field("蛋白质 $unit", values[3], { change(3, it) }, numeric = true)
-        Field("脂肪 $unit", values[5], { change(5, it) }, numeric = true)
-        Text("已有日目标保持原快照；需调整某天时，在身体与训练中勾选重算。", style = MaterialTheme.typography.bodySmall)
-    }
-}

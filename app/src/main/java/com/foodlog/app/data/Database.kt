@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.Flow
     @Upsert suspend fun put(row: TemplateRow)
     @Query("DELETE FROM meals WHERE id = :id") suspend fun deleteMeal(id: String)
     @Query("DELETE FROM meal_templates WHERE id = :id") suspend fun deleteTemplate(id: String)
+    @Query("DELETE FROM day_targets WHERE date = :date") suspend fun deleteTarget(date: String)
     @Query("DELETE FROM import_origins WHERE namespace = :namespace AND sourceKey = :key") suspend fun deleteOrigin(namespace: String, key: String)
     @Query("DELETE FROM foods") suspend fun clearFoods()
     @Query("DELETE FROM food_versions") suspend fun clearVersions()

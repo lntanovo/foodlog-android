@@ -47,7 +47,8 @@ data class DeletedMealBundle(val meal: Meal, val drafts: List<Meal> = emptyList(
 @Serializable data class DayLog(
     val date: String, val training: String = "UNKNOWN", val strengthMinutes: Int? = null,
     val badmintonMinutes: Int? = null, val hunger: Int? = null, val performance: String? = null,
-    val fatigue: String = "", val loggingStatus: String = "UNKNOWN", val note: String = ""
+    val fatigue: String = "", val loggingStatus: String = "UNKNOWN", val note: String = "",
+    val dietDayType: String? = null
 )
 @Serializable data class BodyRecord(
     val date: String, val weight: String? = null, val waist: String? = null,
@@ -56,7 +57,8 @@ data class DeletedMealBundle(val meal: Meal, val drafts: List<Meal> = emptyList(
 @Serializable data class Macros(val protein: String, val carbs: String, val fat: String)
 @Serializable data class TargetPlan(
     val id: String = uid(), val effectiveFrom: String, val mode: String = "DIRECT_MACROS",
-    val referenceWeight: String? = null, val training: Macros, val rest: Macros, val createdAt: String = now()
+    val referenceWeight: String? = null, val training: Macros, val rest: Macros, val createdAt: String = now(),
+    val flex: Macros? = null
 )
 @Serializable data class DayTarget(
     val date: String, val planId: String, val dayType: String,
@@ -71,7 +73,7 @@ data class DeletedMealBundle(val meal: Meal, val drafts: List<Meal> = emptyList(
     val revision: Long = 0, val lastExport: String? = null
 )
 @Serializable data class Dataset(
-    val schemaVersion: Int = 2, val appVersion: String = "1.1.0", val kind: String = "FULL_BACKUP",
+    val schemaVersion: Int = 3, val appVersion: String = "1.2.0", val kind: String = "FULL_BACKUP",
     val exportedAt: String = now(), val meta: Meta = Meta(), val foods: List<Food> = emptyList(),
     val versions: List<FoodVersion> = emptyList(), val meals: List<Meal> = emptyList(),
     val days: List<DayLog> = emptyList(), val bodies: List<BodyRecord> = emptyList(),
@@ -83,4 +85,13 @@ data class DeletedMealBundle(val meal: Meal, val drafts: List<Meal> = emptyList(
 }
 
 val trainingLabels = linkedMapOf("UNKNOWN" to "未填写", "REST" to "休息", "STRENGTH" to "力量", "BADMINTON" to "羽毛球", "BOTH" to "力量＋羽毛球")
+val dietDayTypeLabels = linkedMapOf("TRAINING" to "训练日", "REST" to "休息日", "FLEX" to "放纵日")
+/** A diet label is independent of actual exercise; legacy days can still infer their former quota. */
+fun effectiveDietDayType(day: DayLog?): String? = day?.dietDayType ?: when (day?.training) {
+    "REST" -> "REST"
+    "STRENGTH", "BADMINTON", "BOTH" -> "TRAINING"
+    else -> null
+}
+fun Dataset.planFor(date: String): TargetPlan? = plans.filter { it.effectiveFrom <= date }
+    .maxWithOrNull(compareBy<TargetPlan> { it.effectiveFrom }.thenBy { it.createdAt })
 val mealTypes = listOf("午餐", "晚餐", "加餐", "早餐")

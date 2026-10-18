@@ -37,6 +37,8 @@ class AppViewModel(application: Application, private val saved: SavedStateHandle
     val notices=Channel<Notice>(Channel.BUFFERED)
     val busy=MutableStateFlow(false)
     val draftStatus=MutableStateFlow("草稿已保存")
+    val dietDayBusy=MutableStateFlow(false)
+    val dietDayError=MutableStateFlow<String?>(null)
     val quickMealAction=MutableStateFlow(QuickMealActionState())
     val dark=application.preferences.data.map{it[booleanPreferencesKey("dark")]}.stateIn(viewModelScope,SharingStarted.Eagerly,null)
     private var draftJob: Job?=null
@@ -64,7 +66,18 @@ class AppViewModel(application: Application, private val saved: SavedStateHandle
             catch(e:Exception){quickMealAction.value=QuickMealActionState(id=id,error=e.message?:"操作失败，请重试")}
         }
     }
-    fun date(date: String) { LocalDate.parse(date); saved["selectedDate"]=date; launch{repo.ensureTarget(date)} }
+    fun date(date: String) { LocalDate.parse(date); dietDayError.value=null;saved["selectedDate"]=date; launch{repo.ensureTarget(date)} }
+    fun selectDietDayType(type: String) {
+        if(!dietDayBusy.compareAndSet(false,true)) return
+        val date=selectedDate.value
+        dietDayError.value=null
+        viewModelScope.launch {
+            try { repo.selectDietDayType(date,type) }
+            catch(e:CancellationException){throw e}
+            catch(e:Exception){if(selectedDate.value==date) dietDayError.value=e.message?:"日型保存失败，请重试"}
+            finally { dietDayBusy.value=false }
+        }
+    }
     fun tab(value: Int) { saved["tab"]=value }
     fun today() { date(LocalDate.now(ZoneId.of(data.value?.meta?.timezone?:"Asia/Shanghai")).toString()) }
     fun theme(value: Boolean) { launch{getApplication<Application>().preferences.edit{it[booleanPreferencesKey("dark")]=value}} }

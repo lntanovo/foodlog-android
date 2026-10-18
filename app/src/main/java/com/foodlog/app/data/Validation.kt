@@ -50,7 +50,8 @@ object Validation {
         meal(Meal(id=t.id, date="2000-01-01", type=t.type, status="POSTED", items=t.items), versions)
     }
     fun dataset(d: Dataset) {
-        require(d.schemaVersion in 1..2) { "不支持的备份格式版本" }
+        require(d.schemaVersion in 1..3) { "不支持的备份格式版本" }
+        if (d.schemaVersion < 3) require(d.days.none { it.dietDayType != null } && d.plans.none { it.flex != null } && d.targets.none { it.dayType in listOf("TRAINING", "FLEX") }) { "饮食日型与放纵日配额需要版本3备份格式" }
         require(d.kind in listOf("FULL_BACKUP","FOOD_LIBRARY","LEGACY_IMPORT")) { "文件类型不支持" }
         ZoneId.of(d.meta.timezone); id(d.meta.datasetId); Instant.parse(d.exportedAt)
         d.meta.lastExport?.let(Instant::parse)
@@ -63,10 +64,10 @@ object Validation {
         val postedIds = d.meals.filter { it.status == "POSTED" }.map { it.id }.toSet()
         d.meals.forEach { meal(it, versions, postedIds) }
         d.templates.forEach { template(it, versions) }
-        d.days.forEach { date(it.date); require(it.training in trainingLabels && it.loggingStatus in listOf("UNKNOWN","PARTIAL","COMPLETE")); it.hunger?.let { n -> require(n in 0..10) }; it.strengthMinutes?.let { n-> require(n in 0..1440) }; it.badmintonMinutes?.let { n-> require(n in 0..1440) } }
+        d.days.forEach { date(it.date); require(it.training in trainingLabels && it.loggingStatus in listOf("UNKNOWN","PARTIAL","COMPLETE")); require(it.dietDayType == null || it.dietDayType in dietDayTypeLabels) { "饮食日型无效" }; it.hunger?.let { n -> require(n in 0..10) }; it.strengthMinutes?.let { n-> require(n in 0..1440) }; it.badmintonMinutes?.let { n-> require(n in 0..1440) } }
         d.bodies.forEach { date(it.date); it.weight?.let{n->decimal(n,true)}; it.waist?.let{n->decimal(n,true)} }
-        d.plans.forEach { p -> id(p.id); date(p.effectiveFrom); Instant.parse(p.createdAt); require(p.mode in listOf("PER_KG","DIRECT_MACROS")); if(p.mode=="PER_KG") decimal(p.referenceWeight?:error("缺少参考体重"),true); listOf(p.rest,p.training).forEach { decimal(it.protein); decimal(it.carbs); decimal(it.fat) } }
-        d.targets.forEach { t -> date(t.date); require(t.planId in plans && t.dayType in trainingLabels && t.dayType!="UNKNOWN"); require(t == NutritionCalculator.target(plans.getValue(t.planId),t.date,t.dayType)) { "目标快照不一致" } }
+        d.plans.forEach { p -> id(p.id); date(p.effectiveFrom); Instant.parse(p.createdAt); require(p.mode in listOf("PER_KG","DIRECT_MACROS")); p.referenceWeight?.let { decimal(it,true) }; if(p.mode=="PER_KG") require(p.referenceWeight!=null) { "缺少参考体重" }; listOfNotNull(p.rest,p.training,p.flex).forEach { decimal(it.protein); decimal(it.carbs); decimal(it.fat) } }
+        d.targets.forEach { t -> date(t.date); require(t.planId in plans && t.dayType in (trainingLabels.keys + dietDayTypeLabels.keys) && t.dayType!="UNKNOWN"); require(t == NutritionCalculator.target(plans.getValue(t.planId),t.date,t.dayType)) { "目标快照不一致" } }
         val entities = (d.foods.map{it.id}+d.meals.map{it.id}+d.bodies.map{it.date}+d.days.map{it.date}+d.plans.map{it.id}).toSet()
         d.origins.forEach { require(it.namespace.isNotBlank() && it.key.isNotBlank() && it.fingerprint.isNotBlank()); require(it.entityId in entities) { "导入来源引用断裂" }; Instant.parse(it.importedAt) }
         if(d.kind=="FOOD_LIBRARY") require(d.meals.isEmpty() && d.templates.isEmpty() && d.days.isEmpty() && d.bodies.isEmpty() && d.plans.isEmpty() && d.targets.isEmpty() && d.origins.isEmpty() && d.meta.profile==Profile()) { "食品库夹带个人数据" }

@@ -87,11 +87,19 @@ object NutritionCalculator {
         MetricTotal(if (known.isEmpty() && !(confirmedEmpty && items.isEmpty())) null else known.fold(BigDecimal.ZERO) { a,b -> a + decimal(b) }.canonical(), values.count { it == null }, if (confirmedEmpty && items.isEmpty()) 1 else items.size)
     }
     fun target(plan: TargetPlan, date: String, training: String): DayTarget {
-        require(training != "UNKNOWN") { "请先填写当日训练类型" }
-        val macros = if (training == "REST") plan.rest else plan.training
+        val macros = when (training) {
+            "REST" -> plan.rest
+            "TRAINING", "STRENGTH", "BADMINTON", "BOTH" -> plan.training
+            "FLEX" -> requireNotNull(plan.flex) { "请先设置放纵日配额" }
+            else -> throw IllegalArgumentException("请先选择当天的饮食日型")
+        }
         val factor = if (plan.mode == "PER_KG") decimal(plan.referenceWeight ?: error("缺少目标参考体重"), true) else BigDecimal.ONE
         val p = decimal(macros.protein) * factor; val c = decimal(macros.carbs) * factor; val f = decimal(macros.fat) * factor
         return DayTarget(date,plan.id,training,plan.referenceWeight, Nutrients((p*BigDecimal(4)+c*BigDecimal(4)+f*BigDecimal(9)).canonical(),p.canonical(),c.canonical(),f.canonical()))
+    }
+    fun targetOrNull(plan: TargetPlan?, date: String, dayType: String?): DayTarget? {
+        if (plan == null || dayType == null || dayType == "UNKNOWN" || (dayType == "FLEX" && plan.flex == null)) return null
+        return target(plan, date, dayType)
     }
     fun edible(total: String, bone: String): String {
         val result = decimal(total) - decimal(bone)

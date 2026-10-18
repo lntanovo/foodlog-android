@@ -93,6 +93,8 @@ class Repository(private val context: Context, val db: FoodLogDatabase) {
         d.days.filter { oldDays[it.date] != it }.forEach { dao.put(DayRow(it.date,dataJson.encodeToString(it))) }
         d.bodies.filter { oldBodies[it.date] != it }.forEach { dao.put(BodyRow(it.date,dataJson.encodeToString(it))) }
         d.plans.filter { oldPlans[it.id] != it }.forEach { dao.put(PlanRow(it.id,dataJson.encodeToString(it))) }
+        val targetDates=d.targets.map { it.date }.toSet()
+        oldTargets.keys.filter { it !in targetDates }.forEach { dao.deleteTarget(it) }
         d.targets.filter { oldTargets[it.date] != it }.forEach { dao.put(TargetRow(it.date,dataJson.encodeToString(it))) }
         val originKeys=d.origins.map { it.namespace to it.key }.toSet()
         oldOrigins.keys.filter { it !in originKeys }.forEach { dao.deleteOrigin(it.first,it.second) }
@@ -102,7 +104,7 @@ class Repository(private val context: Context, val db: FoodLogDatabase) {
         d.templates.filter { oldTemplates[it.id] != it }.forEach { dao.put(TemplateRow(it.id,dataJson.encodeToString(it))) }
         val meta=d.meta.copy(revision=d.meta.revision+1)
         dao.put(MetaRow(json=dataJson.encodeToString(meta)))
-        cached=d.copy(schemaVersion=2,appVersion="1.1.0",meta=meta)
+        cached=d.copy(schemaVersion=3,appVersion="1.2.0",meta=meta)
     }
     private suspend fun mutate(block: (Dataset)->Dataset) = lock.withLock {
         transaction { val old=read(); val next=block(old); Validation.dataset(next); if(next!=old) persist(next,old) }
@@ -178,21 +180,56 @@ class Repository(private val context: Context, val db: FoodLogDatabase) {
         d.copy(meals=d.meals+meals,origins=d.origins.filterNot { (it.namespace to it.key) in keys }+bundle.origins)
     }
     suspend fun undoMeal(meal: Meal) = mutate { it.copy(meals=it.meals.filterNot{m->m.id==meal.id}+meal) }
+    suspend fun updateLoggingStatus(date: String, status: String) = mutate { d ->
+        require(status in listOf("UNKNOWN","PARTIAL","COMPLETE")) { "记录完整性无效" }
+        val day=d.days.find { it.date==date }?:DayLog(date)
+        d.copy(days=d.days.filterNot { it.date==date }+day.copy(loggingStatus=status))
+    }
     suspend fun day(day: DayLog, body: BodyRecord? = null, recalculateTarget: Boolean = false) = mutate { d ->
-        val plan=d.plans.filter{it.effectiveFrom<=day.date}.maxWithOrNull(compareBy<TargetPlan>{it.effectiveFrom}.thenBy{it.createdAt})
-        val shouldFix=day.training!="UNKNOWN" && plan!=null && (recalculateTarget || d.targets.none{it.date==day.date})
-        d.copy(days=d.days.filterNot{it.date==day.date}+day,
+        // A body/training editor may hold an older copy; changing exercise must not clear a diet label.
+        val saved=day.copy(dietDayType=d.days.find { it.date==day.date }?.dietDayType ?: day.dietDayType)
+        val shouldFix=recalculateTarget || d.targets.none { it.date==day.date }
+        val target=if(shouldFix) NutritionCalculator.targetOrNull(d.planFor(day.date),day.date,effectiveDietDayType(saved)) else null
+        d.copy(days=d.days.filterNot{it.date==day.date}+saved,
             bodies=if(body==null) d.bodies else d.bodies.filterNot{it.date==body.date}+body,
-            targets=if(shouldFix) d.targets.filterNot{it.date==day.date}+NutritionCalculator.target(plan!!,day.date,day.training) else d.targets)
+            targets=if(shouldFix) d.targets.filterNot { it.date==day.date }+listOfNotNull(target) else d.targets)
+    }
+    /** Selecting the same label is idempotent and retains the frozen historical reference. */
+    suspend fun selectDietDayType(date: String, type: String): DayTarget? {
+        require(type in dietDayTypeLabels) { "饮食日型无效" }
+        var selected: DayTarget?=null
+        mutate { d ->
+            val day=d.days.find { it.date==date }?:DayLog(date)
+            val old=d.targets.find { it.date==date }
+            val oldType=old?.dayType?.let { if(it in listOf("STRENGTH","BADMINTON","BOTH")) "TRAINING" else it }
+            selected=if(effectiveDietDayType(day)==type && oldType==type) old
+                else NutritionCalculator.targetOrNull(d.planFor(date),date,type)
+            d.copy(days=d.days.filterNot { it.date==date }+day.copy(dietDayType=type),
+                targets=d.targets.filterNot { it.date==date }+listOfNotNull(selected))
+        }
+        return selected
+    }
+    /** Explicitly reapply the plan effective on this one date; all other snapshots remain frozen. */
+    suspend fun recalculateTarget(date: String, type: String? = null): DayTarget? {
+        require(type==null || type in dietDayTypeLabels) { "饮食日型无效" }
+        var target: DayTarget?=null
+        mutate { d ->
+            val day=d.days.find { it.date==date }?:DayLog(date)
+            val selected=if(type==null) day else day.copy(dietDayType=type)
+            target=NutritionCalculator.targetOrNull(d.planFor(date),date,effectiveDietDayType(selected))
+            d.copy(days=if(type==null) d.days else d.days.filterNot { it.date==date }+selected,
+                targets=d.targets.filterNot { it.date==date }+listOfNotNull(target))
+        }
+        return target
     }
     suspend fun ensureTarget(date: String) = lock.withLock {
         transaction {
             if(dao.target(date)!=null) return@transaction
             val day=dao.day(date)?.let { dataJson.decodeFromString<DayLog>(it.json) }?:return@transaction
-            if(day.training=="UNKNOWN") return@transaction
+            val type=effectiveDietDayType(day)?:return@transaction
             val plan=dao.plans().map { dataJson.decodeFromString<TargetPlan>(it.json) }.filter { it.effectiveFrom<=date }
                 .maxWithOrNull(compareBy<TargetPlan>{it.effectiveFrom}.thenBy{it.createdAt})?:return@transaction
-            val target=NutritionCalculator.target(plan,date,day.training)
+            val target=NutritionCalculator.targetOrNull(plan,date,type)?:return@transaction
             dao.put(TargetRow(date,dataJson.encodeToString(target)))
             bumpRevision { it.copy(targets=it.targets.filterNot { old -> old.date==date }+target) }
         }
@@ -229,7 +266,7 @@ class Repository(private val context: Context, val db: FoodLogDatabase) {
 
     private fun upgraded(d: Dataset): Dataset {
         Validation.dataset(d)
-        return d.copy(schemaVersion=2,appVersion="1.1.0")
+        return d.copy(schemaVersion=3,appVersion="1.2.0")
     }
     fun parse(text: String): Dataset {
         require(text.length.toLong()<=MAX_BACKUP_BYTES) { "备份解压后不能超过256MiB" }
@@ -283,7 +320,7 @@ class Repository(private val context: Context, val db: FoodLogDatabase) {
         val recovery = recoveryBackup()
         transaction {
             dao.clearFoods();dao.clearVersions();dao.clearMeals();dao.clearDays();dao.clearBodies();dao.clearPlans();dao.clearTargets();dao.clearOrigins();dao.clearTemplates()
-            persist(d.copy(schemaVersion=2,appVersion="1.1.0"))
+            persist(d.copy(schemaVersion=3,appVersion="1.2.0"))
         }
         recovery
     }

@@ -32,7 +32,8 @@ class TemplateFlowTest {
         val food = initial.versions.first { it.name == "荞麦面" }
         val original = Meal(date = today, type = "午餐", status = "POSTED", items = listOf(NutritionCalculator.item(food, "60", "G")))
         runBlocking { repo.restore(initial.copy(meals = listOf(original))) }
-        compose.waitUntil(15_000) { compose.onAllNodesWithText("存为常用餐").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(15_000) { compose.onAllNodesWithTag("meal-more-${original.id}").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("meal-more-${original.id}").performScrollTo().performClick()
         compose.onNodeWithText("存为常用餐").performScrollTo().performClick()
         compose.onNodeWithTag("常用餐名称").performTextReplacement("测试常用午餐")
         compose.activityRule.scenario.recreate()
@@ -86,7 +87,7 @@ class TemplateFlowTest {
                 days = listOf(DayLog(sourceDate, training = "STRENGTH", loggingStatus = "COMPLETE")),
                 bodies = listOf(BodyRecord(sourceDate, weight = "77", waist = "80"))))
         }
-        compose.onNodeWithText("前一天").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("前一天").performScrollTo().performClick()
         compose.waitUntil(15_000) { compose.onAllNodesWithText("2 餐已吃 · 1 份草稿").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("回到今天").performScrollTo().performClick()
         compose.onNodeWithTag("复制昨天入口").performScrollTo().performClick()

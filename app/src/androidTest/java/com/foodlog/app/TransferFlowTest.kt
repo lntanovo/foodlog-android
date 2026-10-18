@@ -37,6 +37,7 @@ class TransferFlowTest {
         org.junit.Assume.assumeTrue("个人迁移夹具只用于本人本机测试",androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().context.assets.list("")!!.contains("legacy_personal.json"))
         returnFile(Intent.ACTION_OPEN_DOCUMENT,"legacy")
         compose.onNodeWithText("设置").performClick()
+        compose.onNodeWithText("食品库与旧数据").performScrollTo().performClick()
         compose.onNodeWithText("导入电脑转换的旧记录…").performScrollTo().performClick()
         compose.waitUntil(15_000){compose.onAllNodesWithText("预览导入").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("确认导入").performClick()

@@ -1,8 +1,8 @@
-# 食记数据格式 v2
+# 食记数据格式 v3
 
-1.1.0（versionCode 3）新导出文件扩展名为 `.foodlog.gz`，内容为GZIP压缩的UTF-8 JSON；根字段为 `schemaVersion:2`、`appVersion:"1.1.0"`、`kind`、`exportedAt`。读取按文件内容识别压缩格式，不依赖扩展名；原v1纯JSON完整备份、食品库、旧迁移文件及种子继续兼容，解析校验后规范为v2。未来schema版本拒绝导入。
+1.2.0（versionCode 4）导出文件扩展名为 `.foodlog.gz`，内容为GZIP压缩的UTF-8 JSON；根字段为 `schemaVersion:3`、`appVersion:"1.2.0"`、`kind`、`exportedAt`。读取按文件内容识别压缩格式，不依赖扩展名；v1/v2完整备份、食品库、旧迁移文件及种子继续兼容，解析校验后规范为v3。未来schema版本拒绝导入。旧版应用不支持v3备份，应使用1.2.0或更新的兼容版本恢复。
 
-`meta`包含`datasetId`、`timezone`（业务时区）、`profile`、`revision`、`lastExport`。十进制业务量使用字符串，未知为null，业务日期严格ISO yyyy-MM-dd，时间为UTC Instant，实体ID为UUID。Room本地数据库版本为2；`MIGRATION_1_2`只增加`meal_templates`表，保留旧表及旧记录；v1、v2 Room schema均保留在源码中。
+`meta`包含`datasetId`、`timezone`（业务时区）、`profile`、`revision`、`lastExport`。十进制业务量使用字符串，未知为null，业务日期严格ISO yyyy-MM-dd，时间为UTC Instant，实体ID为UUID。Room本地数据库版本仍为2；新增业务字段位于已有JSON列，不需要改变表结构。`MIGRATION_1_2`只增加`meal_templates`表，保留旧表及旧记录；v1、v2 Room schema均保留在源码中。
 
 ## 文件类型
 
@@ -24,7 +24,13 @@
 
 复制昨天按所选业务日期的前一自然日查找POSTED餐食，忽略草稿和空餐；创建目标日期的新DRAFT与新meal/item UUID，备注添加“复制自 yyyy-MM-dd”并保留原备注，不带replacesMealId。重复复制在UI确认后可再次创建独立草稿，只有用户保存已吃才进入摄入。模板和复制不会自动修改目标日期的训练、身体记录或日目标。
 
-`days`与`bodies`以date唯一；未填写训练为UNKNOWN。非标准体重独立标记，不计标准晨重均值。`plans`每次修改新建；`targets`保存date唯一的计划及日型快照，不随新计划改变。
+`days`与`bodies`以date唯一；实际训练`training`未填写为UNKNOWN，非标准体重独立标记，不计标准晨重均值。v3新增可空 `days.dietDayType`：TRAINING（训练日）、REST（休息日）、FLEX（放纵日），独立于实际运动和时长。旧JSON缺少该字段时保留null，显示时由旧training推导：REST→REST，STRENGTH/BADMINTON/BOTH→TRAINING，UNKNOWN→无标签。不会把放纵日自动归类成任何运动类型。
+
+`plans`每次修改新建，包含 `effectiveFrom`、`mode`、固定的可选`referenceWeight`，以及`training`、`rest`两组Macros；v3新增可空`flex`作为放纵日配额。Macros包含protein、carbs、fat三个非负十进制字符串。PER_KG模式使用每项系数乘正数参考体重；DIRECT_MACROS模式直接使用克数；热量为蛋白质×4＋碳水×4＋脂肪×9。参考体重不会写入身体记录，系数由用户自行选择，不预置截图中的经验数值。旧计划缺少flex时保持未配置，不复制训练日数值。
+
+`targets`以date唯一，保存planId、dayType、referenceWeight和完整营养快照。新增dayType为TRAINING/REST/FLEX，旧STRENGTH/BADMINTON/BOTH仍可读取并按训练日计划验证，原快照无需重写。某日按生效日期和createdAt选择当时可用计划。首次标记或切换饮食日型会只更新该日的目标；若对应计划不存在或flex未配置，会删除该日不匹配的旧目标并保留标签。重复选择已有标签保留快照，后续新增计划也不会批量重算历史。明确“用于所选日期”时才在同一事务内选标签并使用生效计划重算该日；其它日期、餐食、身体和运动记录不变。已选标签但尚无目标的日期，计划可用后允许首次补建快照。
+
+身体与训练编辑会在事务内保留当前已选饮食日型，记录完整性使用独立字段更新，避免旧表单副本清除新标签。快照的计算必须与所引用的不可变计划一致。schemaVersion小于3的文件若带有非空dietDayType、flex或新增目标日型会拒绝，防止把新功能伪装为旧格式。
 
 `origins`以namespace+key唯一。固定namespace为foodlog-personal-legacy-v1，饮食键为日期/餐次/食品UUID/同名序号，体重为body/日期，训练为day/日期，目标为plan/生效日。文件哈希仅用于核对源文件，不作为去重键。fingerprint基于来源内容，物理行号变化不会改变来源键。实际改动会列为日期冲突；用户逐日选择跳过或替换。
 

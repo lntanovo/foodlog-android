@@ -23,6 +23,7 @@ class FoodEditorFlowTest {
         compose.onNodeWithTag("蛋白质 g").performScrollTo().performTextInput("10")
         compose.onNodeWithTag("碳水化合物 g").performScrollTo().performTextInput("50")
         compose.onNodeWithTag("脂肪 g").performScrollTo().performTextInput("6")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
         compose.onNodeWithText("保存食品").performClick()
         compose.waitUntil(15_000){runBlocking{repo.snapshot().versions.any{it.name=="测试自定义食品"}}}
         val data=runBlocking{repo.snapshot()};val v=data.versions.single{it.name=="测试自定义食品"}
@@ -32,6 +33,7 @@ class FoodEditorFlowTest {
         compose.onNodeWithTag("搜索名称或品牌").performTextInput("测试自定义食品")
         compose.onNodeWithText("编辑新版本").performScrollTo().performClick()
         compose.onNodeWithTag("食品名称 *").performTextReplacement("修改后的食品")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
         compose.onNodeWithText("保存食品新版本").performClick()
         compose.waitUntil(15_000){runBlocking{repo.snapshot().versions.any{it.name=="修改后的食品"}}}
         assertEquals(2,runBlocking{repo.snapshot().versions.count{it.foodId==v.foodId}})

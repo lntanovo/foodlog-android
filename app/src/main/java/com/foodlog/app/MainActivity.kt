@@ -47,16 +47,20 @@ class MainActivity: ComponentActivity() {
         primary=Color(0xFFADD9BE),onPrimary=Color(0xFF0B3925),primaryContainer=Color(0xFF234D37),onPrimaryContainer=Color(0xFFC7EDD6),
         secondary=Color(0xFFBBCDBE),secondaryContainer=Color(0xFF314A39),onSecondaryContainer=Color(0xFFD7EBDC),
         tertiary=Color(0xFFDAC5A5),background=Color(0xFF111A15),surface=Color(0xFF19241D),surfaceVariant=Color(0xFF2B3830),
-        surfaceContainer=Color(0xFF202D24),outlineVariant=Color(0xFF3A4A3E)
+        surfaceContainer=Color(0xFF202D24),surfaceContainerLowest=Color(0xFF0B140F),surfaceContainerLow=Color(0xFF152019),
+        surfaceContainerHigh=Color(0xFF25342A),surfaceContainerHighest=Color(0xFF2D3E31),
+        onSurfaceVariant=Color(0xFFBECBBF),outline=Color(0xFF8C9B8E),outlineVariant=Color(0xFF3A4A3E)
     ) else lightColorScheme(
         primary=Color(0xFF286346),onPrimary=Color.White,primaryContainer=Color(0xFFD5EBDB),onPrimaryContainer=Color(0xFF153E2A),
         secondary=Color(0xFF536A58),secondaryContainer=Color(0xFFE4EEDF),onSecondaryContainer=Color(0xFF284731),
         tertiary=Color(0xFF856A42),background=Color(0xFFF3F5EF),surface=Color(0xFFFEFFF9),surfaceVariant=Color(0xFFE5EAE1),
-        surfaceContainer=Color(0xFFEBF0E6),outlineVariant=Color(0xFFD6DFD2)
+        surfaceContainer=Color(0xFFEBF0E6),surfaceContainerLowest=Color(0xFFFEFFF9),surfaceContainerLow=Color(0xFFF6F8F1),
+        surfaceContainerHigh=Color(0xFFE5ECE1),surfaceContainerHighest=Color(0xFFDDE6D9),
+        onSurfaceVariant=Color(0xFF445247),outline=Color(0xFF6E7D70),outlineVariant=Color(0xFFD6DFD2)
     )
     MaterialTheme(colorScheme=scheme,shapes=Shapes(small=RoundedCornerShape(12.dp),medium=RoundedCornerShape(18.dp),large=RoundedCornerShape(24.dp))) {
         LaunchedEffect(Unit) { for(notice in vm.notices) { val result=snackbar.showSnackbar(notice.text,actionLabel=if(notice.undo!=null) "撤销" else null,duration=SnackbarDuration.Short);if(result==SnackbarResult.ActionPerformed) notice.undo?.let{vm.launch{vm.repo.undoDeletion(it)}} } }
-        LaunchedEffect(date,data?.plans?.size,data?.days?.find{it.date==date}?.training) { if(data!=null) vm.launch{vm.repo.ensureTarget(date)} }
+        LaunchedEffect(date,data?.plans?.size,data?.days?.find{it.date==date}?.training,data?.days?.find{it.date==date}?.dietDayType) { if(data!=null) vm.launch{vm.repo.ensureTarget(date)} }
         Surface(Modifier.fillMaxSize()) {
             if(data==null) Box(Modifier.fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.Center){
                 if(loadingError==null) CircularProgressIndicator() else Column(Modifier.padding(24.dp)) {Text("无法读取本机记录");Text(loadingError!!);Button(onClick={vm.start()}){Text("重试")}}
@@ -64,8 +68,8 @@ class MainActivity: ComponentActivity() {
             else if(editor!=null) MealScreen(vm,data!!,editor!!,snackbar)
             else Scaffold(
                 snackbarHost={SnackbarHost(snackbar)},
-                bottomBar={NavigationBar(containerColor=MaterialTheme.colorScheme.surface) { listOf("今日","食品","趋势","设置").forEachIndexed { i,name ->
-                    val icon=listOf(Icons.Outlined.Restaurant,Icons.Outlined.Kitchen,Icons.Outlined.ShowChart,Icons.Outlined.Settings)[i]
+                bottomBar={NavigationBar(containerColor=MaterialTheme.colorScheme.surface) { listOf("今日","食品","趋势","配额","设置").forEachIndexed { i,name ->
+                    val icon=listOf(Icons.Outlined.Restaurant,Icons.Outlined.Kitchen,Icons.Outlined.ShowChart,Icons.Outlined.Tune,Icons.Outlined.Settings)[i]
                     NavigationBarItem(tab==i,{vm.tab(i)},icon={Icon(icon,name)},label={Text(name)})
                 } }},
                 floatingActionButton={if(tab==0) ExtendedFloatingActionButton(onClick={vm.edit()},modifier=Modifier.semantics{contentDescription="记一餐"},containerColor=MaterialTheme.colorScheme.primary,contentColor=MaterialTheme.colorScheme.onPrimary,icon={Icon(Icons.Outlined.Add,null)},text={Text("记一餐")})}
@@ -76,6 +80,7 @@ class MainActivity: ComponentActivity() {
                         0->TodayScreen(vm,data!!,date)
                         1->FoodsScreen(vm,data!!)
                         2->TrendScreen(vm,data!!,date)
+                        3->QuotaScreen(vm,data!!)
                         else->SettingsScreen(vm,data!!)
                     }
                     }
