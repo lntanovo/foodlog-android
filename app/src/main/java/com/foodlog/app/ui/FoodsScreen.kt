@@ -9,6 +9,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.Saver
+import com.foodlog.app.data.dataJson
+import kotlinx.serialization.encodeToString
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -17,9 +21,15 @@ import androidx.compose.ui.window.DialogProperties
 import com.foodlog.app.domain.*
 import com.foodlog.app.data.Validation
 
+private val PortionsSaver = Saver<List<Portion>,String>(
+    save={dataJson.encodeToString(it)},
+    restore={runCatching{dataJson.decodeFromString<List<Portion>>(it)}.getOrDefault(emptyList())}
+)
+
 @Composable fun FoodsScreen(vm: AppViewModel, data: Dataset) {
-    var query by remember{mutableStateOf("")};var archived by remember{mutableStateOf(false)}
-    var editing by remember{mutableStateOf<Food?>(null)};var newFood by remember{mutableStateOf(false)}
+    var query by rememberSaveable{mutableStateOf("")};var archived by rememberSaveable{mutableStateOf(false)}
+    var editingId by rememberSaveable{mutableStateOf<String?>(null)};var newFood by rememberSaveable{mutableStateOf(false)}
+    val editing=data.foods.find{it.id==editingId}
     val foods=data.foods.filter{it.archived==archived && data.version(it).let{v->(v.name+v.brand).contains(query,true)}}.sortedWith(compareByDescending<Food>{it.favorite}.thenBy{data.version(it).name})
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {Text("食品库",style=MaterialTheme.typography.headlineLarge);Text("你的常备食材，一次录入反复使用",style=MaterialTheme.typography.bodySmall)}
@@ -37,29 +47,29 @@ import com.foodlog.app.data.Validation
                 Text("${NutritionCalculator.energy(v).source} · ${v.sourceText}",maxLines=3,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                     IconButton(onClick={vm.launch{vm.repo.flagFood(food.id,favorite=!food.favorite)}}){Icon(if(food.favorite) Icons.Outlined.Star else Icons.Outlined.StarBorder,if(food.favorite) "取消收藏" else "收藏")}
-                    TextButton(onClick={editing=food}){Text("编辑新版本")}
+                    TextButton(onClick={editingId=food.id}){Text("编辑新版本")}
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick={vm.launch{vm.repo.flagFood(food.id,archived=!food.archived)}}){Text(if(archived) "恢复" else "归档")}
                 }
             }
         }
     }
-    if(newFood || editing!=null) FoodEditor(vm,data,editing){newFood=false;editing=null}
+    if(newFood || editing!=null) FoodEditor(vm,data,editing){newFood=false;editingId=null}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun FoodEditor(vm: AppViewModel, data: Dataset, food: Food?, dismiss: ()->Unit) {
     val old=food?.let{data.version(it)}
-    val foodId=remember{food?.id?:uid()}
-    var name by remember{mutableStateOf(old?.name?:"")};var brand by remember{mutableStateOf(old?.brand?:"")}
-    var basis by remember{mutableStateOf(old?.basisQuantity?:"100")};var unit by remember{mutableStateOf(old?.basisUnit?:"G")}
-    var kcal by remember{mutableStateOf(old?.labelKcal?:old?.tableKcal?:"")};var kj by remember{mutableStateOf(old?.labelKj?:"")}
-    var protein by remember{mutableStateOf(old?.nutrients?.protein?:"")};var carbs by remember{mutableStateOf(old?.nutrients?.carbs?:"")}
-    var fat by remember{mutableStateOf(old?.nutrients?.fat?:"")};var sodium by remember{mutableStateOf(old?.nutrients?.sodium?:"")};var fiber by remember{mutableStateOf(old?.nutrients?.fiber?:"")}
-    var density by remember{mutableStateOf(old?.densityGPerMl?:"")};var weighing by remember{mutableStateOf(old?.weighingBasis?:"实际可食重量")}
+    val foodId=rememberSaveable{food?.id?:uid()}
+    var name by rememberSaveable{mutableStateOf(old?.name?:"")};var brand by rememberSaveable{mutableStateOf(old?.brand?:"")}
+    var basis by rememberSaveable{mutableStateOf(old?.basisQuantity?:"100")};var unit by rememberSaveable{mutableStateOf(old?.basisUnit?:"G")}
+    var kcal by rememberSaveable{mutableStateOf(old?.labelKcal?:old?.tableKcal?:"")};var kj by rememberSaveable{mutableStateOf(old?.labelKj?:"")}
+    var protein by rememberSaveable{mutableStateOf(old?.nutrients?.protein?:"")};var carbs by rememberSaveable{mutableStateOf(old?.nutrients?.carbs?:"")}
+    var fat by rememberSaveable{mutableStateOf(old?.nutrients?.fat?:"")};var sodium by rememberSaveable{mutableStateOf(old?.nutrients?.sodium?:"")};var fiber by rememberSaveable{mutableStateOf(old?.nutrients?.fiber?:"")}
+    var density by rememberSaveable{mutableStateOf(old?.densityGPerMl?:"")};var weighing by rememberSaveable{mutableStateOf(old?.weighingBasis?:"实际可食重量")}
     val sources=linkedMapOf("PACKAGE_LABEL" to "包装标签","AVERAGE_ESTIMATE" to "食品平均估算","USER_INPUT" to "用户输入","CALCULATED" to "计算换算")
-    var source by remember{mutableStateOf(old?.sourceKind?:"USER_INPUT")};var sourceText by remember{mutableStateOf(old?.sourceText?:"")};var url by remember{mutableStateOf(old?.sourceUrl?:"")}
-    var portions by remember{mutableStateOf(old?.portions?:emptyList())};var error by remember{mutableStateOf<String?>(null)}
+    var source by rememberSaveable{mutableStateOf(old?.sourceKind?:"USER_INPUT")};var sourceText by rememberSaveable{mutableStateOf(old?.sourceText?:"")};var url by rememberSaveable{mutableStateOf(old?.sourceUrl?:"")}
+    var portions by rememberSaveable(stateSaver=PortionsSaver){mutableStateOf(old?.portions?:emptyList())};var error by rememberSaveable{mutableStateOf<String?>(null)}
     var saving by remember{mutableStateOf(false)}
     Dialog(onDismissRequest=dismiss,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
         Scaffold(topBar={TopAppBar(title={Text(if(food==null) "新增食品" else "编辑食品新版本")},navigationIcon={IconButton(onClick=dismiss){Icon(Icons.Outlined.Close,"关闭")}})},bottomBar={Surface{Column(Modifier.navigationBarsPadding().imePadding().padding(16.dp)) {
@@ -93,14 +103,18 @@ import com.foodlog.app.data.Validation
                         Field("份量名称（如袋、盒、个）",p.name,{v->portions=portions.mapIndexed{i,x->if(i==index)x.copy(name=v) else x}})
                         Field("每${p.name.ifBlank{"份"}}的数量",p.amount,{v->portions=portions.mapIndexed{i,x->if(i==index)x.copy(amount=v) else x}},numeric=true)
                         Choices(listOf("G","ML"),p.unit,{v->portions=portions.mapIndexed{i,x->if(i==index)x.copy(unit=v) else x}})
-                        Row(verticalAlignment=Alignment.CenterVertically){Checkbox(p.estimated,{v->portions=portions.mapIndexed{i,x->if(i==index)x.copy(estimated=v) else x}});Text("估算份量");Spacer(Modifier.weight(1f));TextButton(onClick={portions=portions.filterIndexed{i,_->i!=index}}){Text("移除")}}
+                        CheckRow("估算份量",p.estimated,{v->portions=portions.mapIndexed{i,x->if(i==index)x.copy(estimated=v) else x}})
+                        TextButton(onClick={portions=portions.filterIndexed{i,_->i!=index}}){Text("移除此份量")}
                         HorizontalDivider()
                     } }
                     TextButton(onClick={portions=portions+Portion("","",unit)}){Text("＋ 添加一种份量")}
                 }
-                Text("信息来源");Choices(sources.values.toList(),sources[source]?:"用户输入",{label->source=sources.entries.first{it.value==label}.key})
-                Field("来源与估算说明",sourceText,{sourceText=it});Field("来源链接（可选）",url,{url=it})
+                Section("信息来源") {
+                    Choices(sources.values.toList(),sources[source]?:"用户输入",{label->source=sources.entries.first{it.value==label}.key})
+                    Field("来源与估算说明",sourceText,{sourceText=it});Field("来源链接（可选）",url,{url=it})
+                }
             }
         }
     }
 }
+

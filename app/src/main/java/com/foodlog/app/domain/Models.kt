@@ -31,13 +31,19 @@ fun now(): String = Instant.now().toString()
 @Serializable data class MealItem(
     val id: String = uid(), val foodId: String, val foodVersionId: String,
     val quantity: String? = null, val unit: String = "G", val quantityStatus: String = "KNOWN",
-    val snapshot: FoodVersion, val normalizedAmount: String? = null, val derived: Nutrients = Nutrients()
+    val snapshot: FoodVersion, val normalizedAmount: String? = null, val derived: Nutrients = Nutrients(),
+    val draftQuantityText: String? = null
 )
 @Serializable data class Meal(
     val id: String = uid(), val date: String, val type: String = "午餐", val status: String = "DRAFT",
     val items: List<MealItem> = emptyList(), val note: String = "", val replacesMealId: String? = null,
     val createdAt: String = now(), val updatedAt: String = now()
 )
+@Serializable data class MealTemplate(
+    val id: String = uid(), val name: String, val type: String = "午餐", val items: List<MealItem>,
+    val createdAt: String = now(), val updatedAt: String = now()
+)
+data class DeletedMealBundle(val meal: Meal, val drafts: List<Meal> = emptyList(), val origins: List<ImportOrigin> = emptyList())
 @Serializable data class DayLog(
     val date: String, val training: String = "UNKNOWN", val strengthMinutes: Int? = null,
     val badmintonMinutes: Int? = null, val hunger: Int? = null, val performance: String? = null,
@@ -65,12 +71,13 @@ fun now(): String = Instant.now().toString()
     val revision: Long = 0, val lastExport: String? = null
 )
 @Serializable data class Dataset(
-    val schemaVersion: Int = 1, val appVersion: String = "1.0.0", val kind: String = "FULL_BACKUP",
+    val schemaVersion: Int = 2, val appVersion: String = "1.1.0", val kind: String = "FULL_BACKUP",
     val exportedAt: String = now(), val meta: Meta = Meta(), val foods: List<Food> = emptyList(),
     val versions: List<FoodVersion> = emptyList(), val meals: List<Meal> = emptyList(),
     val days: List<DayLog> = emptyList(), val bodies: List<BodyRecord> = emptyList(),
     val plans: List<TargetPlan> = emptyList(), val targets: List<DayTarget> = emptyList(),
-    val origins: List<ImportOrigin> = emptyList(), val report: List<String> = emptyList()
+    val origins: List<ImportOrigin> = emptyList(), val report: List<String> = emptyList(),
+    val templates: List<MealTemplate> = emptyList()
 ) {
     fun version(food: Food): FoodVersion = versions.first { it.id == food.activeVersionId }
 }

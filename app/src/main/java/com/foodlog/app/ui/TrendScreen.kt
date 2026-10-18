@@ -6,58 +6,145 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.foodlog.app.domain.*
 import java.time.LocalDate
+import kotlin.math.abs
+import kotlin.math.max
 
 @Composable fun TrendScreen(vm: AppViewModel, data: Dataset, date: String) {
-    var range by remember{mutableStateOf("30天")};var dialog by remember{mutableStateOf(false)}
-    val end=LocalDate.parse(date);val count=range.removeSuffix("天").toInt()
-    val days=(0 until count).map{end.minusDays(it.toLong())}
-    val stats=Trends.window(data.bodies,end)
-    val color=MaterialTheme.colorScheme.primary;val secondary=MaterialTheme.colorScheme.tertiary;val grid=MaterialTheme.colorScheme.outlineVariant
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-        item {Text("身体趋势",style=MaterialTheme.typography.headlineLarge);Text("看一段时间的变化，也容纳每天的波动。",style=MaterialTheme.typography.bodySmall)}
-        item {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){DateButton(date,vm::date);Button(onClick={dialog=true}){Text("记录 / 编辑")}}}
-        item {Choices(listOf("7天","30天","90天"),range,{range=it})}
-        item {Section(if(stats.count==7) "7日平均体重" else "7日暂均值 · ${stats.count}/7天") {
-            Text(stats.mean?.let{"${display(it,2)} kg"}?:"数据不足",style=MaterialTheme.typography.headlineLarge,color=color)
-            Text("与前7日变化：${stats.change?.let{"${if(it.toBigDecimal().signum()>0) "+" else ""}${display(it,2)} kg"}?:"数据不足（需两个完整7日窗口）"}",style=MaterialTheme.typography.bodySmall)
-            Text("仅使用当日及前6个自然日的标准晨重；非标准称重另列。",style=MaterialTheme.typography.bodySmall)
-        }}
-        item {Section("体重曲线", "● 实测晨重    ━ 7日均值；缺测处断开") {
-            val ordered=days.reversed()
-            val weights=ordered.map{d->data.bodies.find{it.date==d.toString() && it.standard}?.weight?.toFloat()}
-            val means=ordered.map{Trends.window(data.bodies,it).mean?.toFloat()}
-            val values=(weights+means).filterNotNull()
-            if(values.isEmpty()) Text("还没有标准晨重，记录后在这里查看。") else {
-                val min=values.min()-0.3f;val max=values.max()+0.3f
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("${display(max.toString())} kg");Text("${display(min.toString())} kg")}
-                Canvas(Modifier.fillMaxWidth().height(180.dp)) {
-                    (0..3).forEach{val y=size.height*it/3;drawLine(grid,Offset(0f,y),Offset(size.width,y),1.dp.toPx())}
-                    fun point(i:Int,v:Float)=Offset(size.width*i/(count-1),size.height*(1-(v-min)/(max-min)))
-                    means.forEachIndexed { i,value->if(i>0 && value!=null && means[i-1]!=null) drawLine(secondary,point(i-1,means[i-1]!!),point(i,value),2.dp.toPx()) }
-                    weights.forEachIndexed { i,value->if(value!=null){if(i>0 && weights[i-1]!=null) drawLine(color,point(i-1,weights[i-1]!!),point(i,value),1.dp.toPx());drawCircle(color,3.dp.toPx(),point(i,value))} }
-                }
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(ordered.first().toString().substring(5));Text(ordered.last().toString().substring(5))}
+    var range by rememberSaveable { mutableStateOf("30天") }
+    var dialog by rememberSaveable { mutableStateOf(false) }
+    var editingDate by rememberSaveable { mutableStateOf(date) }
+    val end = LocalDate.parse(date)
+    val count = range.removeSuffix("天").toInt()
+    val days = (0 until count).map { end.minusDays(it.toLong()) }
+    val stats = Trends.window(data.bodies, end)
+
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        LazyColumn(
+            Modifier.widthIn(max = 720.dp).fillMaxWidth(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            item {
+                Text("身体趋势", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("留意长期变化，也容纳每天的波动。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }}
-        item {Text("日期记录",style=MaterialTheme.typography.titleLarge)}
-        items(days,key={it.toString()}) { d ->
-            val body=data.bodies.find{it.date==d.toString()};val day=data.days.find{it.date==d.toString()};val mean=Trends.window(data.bodies,d)
-            OutlinedCard(onClick={vm.date(d.toString());dialog=true},modifier=Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                    Text(d.toString(),style=MaterialTheme.typography.titleSmall)
-                    Text(body?.weight?.let{"${display(it)} kg${if(body.standard) " · 标准晨重" else " · 非标准称重（不计均值）"}"}?:"晨重缺测")
-                    if(body?.waist!=null) Text("腰围 ${display(body.waist)} cm")
-                    Text("${if(mean.count==7) "7日均值" else "暂均值 ${mean.count}/7"} ${mean.mean?.let{display(it,2)}?:"数据不足"} · ${trainingLabels[day?.training?:"UNKNOWN"]}",style=MaterialTheme.typography.bodySmall)
-                    if(day?.hunger!=null) Text("饥饿感 ${day.hunger}/10 · 表现 ${day.performance?:"未填写"}",style=MaterialTheme.typography.bodySmall)
-                    if(!body?.note.isNullOrBlank()) Text(body!!.note,style=MaterialTheme.typography.bodySmall)
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    DateButton(date, vm::date, Modifier.heightIn(min = 48.dp))
+                    FilledTonalButton(onClick = { editingDate = date; dialog = true }, modifier = Modifier.heightIn(min = 48.dp)) { Text("记录 / 编辑") }
+                }
+            }
+            item {
+                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (stats.count == 7) "7日平均体重" else "7日暂均值", style = MaterialTheme.typography.titleSmall)
+                            Text("${stats.count} / 7 天晨重", style = MaterialTheme.typography.labelMedium)
+                        }
+                        Text(stats.mean?.let { "${display(it, 2)} kg" } ?: "数据不足", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                        Text(stats.change?.let { "较前7日 ${if (it.toBigDecimal().signum() > 0) "+" else ""}${display(it, 2)} kg" } ?: "与前7日变化：需两个完整7日窗口", style = MaterialTheme.typography.bodySmall)
+                        Text("${end.minusDays(6)} 至 $date · 仅计标准晨重", style = MaterialTheme.typography.bodySmall)
+                        if (stats.count in 1..6) Text("暂均值来自已有记录，补足7天后再比较。", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+            item {
+                Section("体重曲线") {
+                    Choices(listOf("7天", "30天", "90天"), range, { range = it })
+                    WeightChart(data, days.reversed())
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text("● 标准晨重", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("━ 完整7日均值", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+                    }
+                    Text("┄ 暂均值（不足7天） · 晨重缺测处断开", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("日期记录", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text("点按修改", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            items(days, key = { it.toString() }) { d ->
+                val body = data.bodies.find { it.date == d.toString() }
+                val day = data.days.find { it.date == d.toString() }
+                val mean = Trends.window(data.bodies, d)
+                OutlinedCard(onClick = { editingDate = d.toString(); vm.date(editingDate); dialog = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp)) {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(d.toString(), style = MaterialTheme.typography.titleSmall)
+                            Text(body?.weight?.let { "${display(it)} kg" } ?: "晨重缺测", style = MaterialTheme.typography.titleSmall, color = if (body?.weight != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text("${if (body?.weight != null) if (body.standard) "标准晨重" else "非标准称重（不计均值）" else "未称重"} · ${trainingLabels[day?.training ?: "UNKNOWN"]}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (body?.waist != null) Text("腰围 ${display(body.waist)} cm", style = MaterialTheme.typography.bodySmall)
+                        Text("${if (mean.count == 7) "7日均值" else "暂均值 ${mean.count}/7"} ${mean.mean?.let { "${display(it, 2)} kg" } ?: "数据不足"}", style = MaterialTheme.typography.bodySmall)
+                        if (day?.hunger != null) Text("饥饿感 ${day.hunger}/10 · 表现 ${day.performance ?: "未填写"}", style = MaterialTheme.typography.bodySmall)
+                        if (!body?.note.isNullOrBlank()) Text(body!!.note, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
         }
     }
-    if(dialog) BodyDayDialog(vm,data,date){dialog=false}
+    if (dialog) BodyDayDialog(vm, data, editingDate) { dialog = false }
+}
+
+@Composable private fun WeightChart(data: Dataset, ordered: List<LocalDate>) {
+    val weights = ordered.map { d -> data.bodies.find { it.date == d.toString() && it.standard }?.weight?.toDoubleOrNull() }
+    val windows = ordered.map { Trends.window(data.bodies, it) }
+    val means = windows.map { it.mean?.toDoubleOrNull() }
+    val values = (weights + means).filterNotNull().filter { it.isFinite() }
+    if (values.isEmpty()) {
+        Text("还没有标准晨重，记录后在这里查看。", modifier = Modifier.padding(vertical = 24.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
+    val padding = max(.3, max(values.max() - values.min(), abs(values.max()) * .01) * .15)
+    val low = values.min() - padding
+    val high = values.max() + padding
+    val color = MaterialTheme.colorScheme.primary
+    val average = MaterialTheme.colorScheme.tertiary
+    val grid = MaterialTheme.colorScheme.outlineVariant
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.height(180.dp).widthIn(min = 40.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Text(display(high.toString()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("kg", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(display(low.toString()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Canvas(Modifier.weight(1f).height(180.dp).semantics { contentDescription = "${ordered.first()}至${ordered.last()}体重趋势。实线为完整7日均值，虚线为不足7天的暂均值；每天的具体数值见下方日期记录。" }) {
+            val inset = 4.dp.toPx()
+            (0..3).forEach { val y = inset + (size.height - inset * 2) * it / 3; drawLine(grid, Offset(inset, y), Offset(size.width - inset, y), 1.dp.toPx()) }
+            fun point(i: Int, v: Double) = Offset(inset + (size.width - inset * 2) * i / (ordered.size - 1), inset + (size.height - inset * 2) * (1 - (v - low) / (high - low)).toFloat())
+            val dash = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx()))
+            means.forEachIndexed { i, value ->
+                if (value != null && value.isFinite()) {
+                    val full = windows[i].count == 7
+                    if (i > 0 && means[i - 1] != null && means[i - 1]!!.isFinite()) {
+                        drawLine(average.copy(alpha = if (full && windows[i - 1].count == 7) 1f else .7f), point(i - 1, means[i - 1]!!), point(i, value), 2.5.dp.toPx(), pathEffect = if (full && windows[i - 1].count == 7) null else dash)
+                    }
+                    if (!full) drawCircle(average, 2.5.dp.toPx(), point(i, value), style = Stroke(1.dp.toPx()))
+                }
+            }
+            weights.forEachIndexed { i, value ->
+                if (value != null && value.isFinite()) {
+                    if (i > 0 && weights[i - 1] != null && weights[i - 1]!!.isFinite()) drawLine(color.copy(alpha = .45f), point(i - 1, weights[i - 1]!!), point(i, value), 1.dp.toPx())
+                    drawCircle(color, 3.dp.toPx(), point(i, value))
+                }
+            }
+        }
+    }
+    Row(Modifier.fillMaxWidth().padding(start = 48.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(ordered.first().toString().substring(5), style = MaterialTheme.typography.labelSmall)
+        Text(ordered.last().toString().substring(5), style = MaterialTheme.typography.labelSmall)
+    }
 }

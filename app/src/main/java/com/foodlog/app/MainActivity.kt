@@ -6,11 +6,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -31,9 +34,28 @@ class MainActivity: ComponentActivity() {
     val editor by vm.editor.collectAsStateWithLifecycle()
     val snackbar=remember{SnackbarHostState()}
     val isDark=dark?:isSystemInDarkTheme()
-    val scheme=if(isDark) darkColorScheme(primary=Color(0xFFAACFB5),background=Color(0xFF151D19),surface=Color(0xFF202A24),secondaryContainer=Color(0xFF354D3D)) else lightColorScheme(primary=Color(0xFF326A50),onPrimary=Color.White,background=Color(0xFFF4F5EF),surface=Color(0xFFFEFFF9),secondaryContainer=Color(0xFFDCEBD9),onSecondaryContainer=Color(0xFF284B37))
-    MaterialTheme(colorScheme=scheme) {
-        LaunchedEffect(Unit) { for(notice in vm.notices) { val result=snackbar.showSnackbar(notice.text,actionLabel=if(notice.undo!=null) "撤销" else null,duration=SnackbarDuration.Short);if(result==SnackbarResult.ActionPerformed) notice.undo?.let{vm.repo.undoMeal(it)} } }
+    val view=LocalView.current
+    SideEffect {
+        (view.context as? android.app.Activity)?.let { activity ->
+            WindowCompat.getInsetsController(activity.window,view).apply {
+                isAppearanceLightStatusBars=!isDark
+                isAppearanceLightNavigationBars=!isDark
+            }
+        }
+    }
+    val scheme=if(isDark) darkColorScheme(
+        primary=Color(0xFFADD9BE),onPrimary=Color(0xFF0B3925),primaryContainer=Color(0xFF234D37),onPrimaryContainer=Color(0xFFC7EDD6),
+        secondary=Color(0xFFBBCDBE),secondaryContainer=Color(0xFF314A39),onSecondaryContainer=Color(0xFFD7EBDC),
+        tertiary=Color(0xFFDAC5A5),background=Color(0xFF111A15),surface=Color(0xFF19241D),surfaceVariant=Color(0xFF2B3830),
+        surfaceContainer=Color(0xFF202D24),outlineVariant=Color(0xFF3A4A3E)
+    ) else lightColorScheme(
+        primary=Color(0xFF286346),onPrimary=Color.White,primaryContainer=Color(0xFFD5EBDB),onPrimaryContainer=Color(0xFF153E2A),
+        secondary=Color(0xFF536A58),secondaryContainer=Color(0xFFE4EEDF),onSecondaryContainer=Color(0xFF284731),
+        tertiary=Color(0xFF856A42),background=Color(0xFFF3F5EF),surface=Color(0xFFFEFFF9),surfaceVariant=Color(0xFFE5EAE1),
+        surfaceContainer=Color(0xFFEBF0E6),outlineVariant=Color(0xFFD6DFD2)
+    )
+    MaterialTheme(colorScheme=scheme,shapes=Shapes(small=RoundedCornerShape(12.dp),medium=RoundedCornerShape(18.dp),large=RoundedCornerShape(24.dp))) {
+        LaunchedEffect(Unit) { for(notice in vm.notices) { val result=snackbar.showSnackbar(notice.text,actionLabel=if(notice.undo!=null) "撤销" else null,duration=SnackbarDuration.Short);if(result==SnackbarResult.ActionPerformed) notice.undo?.let{vm.launch{vm.repo.undoDeletion(it)}} } }
         LaunchedEffect(date,data?.plans?.size,data?.days?.find{it.date==date}?.training) { if(data!=null) vm.launch{vm.repo.ensureTarget(date)} }
         Surface(Modifier.fillMaxSize()) {
             if(data==null) Box(Modifier.fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.Center){
@@ -42,18 +64,20 @@ class MainActivity: ComponentActivity() {
             else if(editor!=null) MealScreen(vm,data!!,editor!!,snackbar)
             else Scaffold(
                 snackbarHost={SnackbarHost(snackbar)},
-                bottomBar={NavigationBar { listOf("今日","食品","趋势","设置").forEachIndexed { i,name ->
+                bottomBar={NavigationBar(containerColor=MaterialTheme.colorScheme.surface) { listOf("今日","食品","趋势","设置").forEachIndexed { i,name ->
                     val icon=listOf(Icons.Outlined.Restaurant,Icons.Outlined.Kitchen,Icons.Outlined.ShowChart,Icons.Outlined.Settings)[i]
                     NavigationBarItem(tab==i,{vm.tab(i)},icon={Icon(icon,name)},label={Text(name)})
                 } }},
                 floatingActionButton={if(tab==0) ExtendedFloatingActionButton(onClick={vm.edit()},modifier=Modifier.semantics{contentDescription="记一餐"},containerColor=MaterialTheme.colorScheme.primary,contentColor=MaterialTheme.colorScheme.onPrimary,icon={Icon(Icons.Outlined.Add,null)},text={Text("记一餐")})}
             ) { padding ->
-                Box(Modifier.padding(padding).fillMaxSize()) {
+                Box(Modifier.padding(padding).fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.TopCenter) {
+                    Box(Modifier.widthIn(max=900.dp).fillMaxSize()) {
                     when(tab) {
                         0->TodayScreen(vm,data!!,date)
                         1->FoodsScreen(vm,data!!)
                         2->TrendScreen(vm,data!!,date)
                         else->SettingsScreen(vm,data!!)
+                    }
                     }
                 }
             }

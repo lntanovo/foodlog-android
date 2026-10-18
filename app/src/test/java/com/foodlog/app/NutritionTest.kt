@@ -34,6 +34,25 @@ class NutritionTest {
     @Test fun missingAndNonstandardWeightsNotFilled() {val date=LocalDate.of(2026,1,14);val rows=(0..13).map{BodyRecord(date.minusDays(it.toLong()).toString(),"65",standard=it!=2)};val w=Trends.window(rows,date);assertEquals(6,w.count);assertNull(w.change);assertEquals(0,Trends.window(rows,date.plusDays(30)).count)}
     @Test fun historicalFoodSnapshotSurvivesLabelChange() {val v=food("mixed_nuts");val i=NutritionCalculator.item(v,"15","G");val edited=v.copy(id=uid(),name="新版",labelKcal="999");assertEquals(v.name,i.snapshot.name);assertNotEquals(NutritionCalculator.item(edited,"15","G").derived.kcal,i.derived.kcal);assertEquals(i.derived,NutritionCalculator.item(i.snapshot,"15","G").derived)}
     @Test fun quotasAreIndependentOfMorningWeight() {val p=TargetPlan(effectiveFrom="2026-10-16",mode="PER_KG",referenceWeight="65",training=Macros("1.5","2.75","0.8"),rest=Macros("1.5","2.25","0.8"));assertEquals("1573",NutritionCalculator.target(p,"2026-10-16","BOTH").nutrients.kcal);assertEquals("1443",NutritionCalculator.target(p,"2026-10-17","REST").nutrients.kcal);assertThrows(IllegalArgumentException::class.java){NutritionCalculator.target(p,"2026-10-16","UNKNOWN")}}
-    @Test fun backupRoundTripAndRejectBadReferences() {val full=seed.copy(kind="FULL_BACKUP");assertEquals(full,dataJson.decodeFromString<Dataset>(dataJson.encodeToString(full)));assertThrows(IllegalArgumentException::class.java){Validation.dataset(full.copy(schemaVersion=2))};assertThrows(IllegalArgumentException::class.java){Validation.dataset(full.copy(versions=emptyList()))};assertThrows(IllegalArgumentException::class.java){Validation.dataset(full.copy(foods=full.foods+full.foods.first()))}}
+    @Test fun backupRoundTripAndRejectBadReferences() {val full=seed.copy(kind="FULL_BACKUP");assertEquals(full,dataJson.decodeFromString<Dataset>(dataJson.encodeToString(full)));assertThrows(IllegalArgumentException::class.java){Validation.dataset(full.copy(schemaVersion=999))};assertThrows(IllegalArgumentException::class.java){Validation.dataset(full.copy(versions=emptyList()))};assertThrows(IllegalArgumentException::class.java){Validation.dataset(full.copy(foods=full.foods+full.foods.first()))}}
+    @Test fun changingQuantityUnitsKeepsActualAmount() {
+        val v=food("buckwheat_noodles_60g")
+        val original=NutritionCalculator.item(v,"60","G")
+        val bag=NutritionCalculator.changeUnit(original,"袋")
+        assertEquals("1",bag.quantity); assertEquals(original.derived,bag.derived)
+        assertEquals("60",NutritionCalculator.changeUnit(bag,"G").quantity)
+        val liquid=FoodVersion(foodId=uid(),name="液体",basisUnit="ML",densityGPerMl="2",portions=listOf(Portion("瓶","250","ML")))
+        assertEquals("0.2",NutritionCalculator.convertQuantity(liquid,"100","G","瓶"))
+        assertThrows(IllegalArgumentException::class.java) { NutritionCalculator.convertQuantity(liquid.copy(densityGPerMl=null),"100","G","ML") }
+    }
+    @Test fun weighingAnEstimatedPortionClearsOnlyTheQuantityEstimate() {
+        val v=food("egg_hard_boiled_estimate")
+        val grams=NutritionCalculator.changeUnit(NutritionCalculator.item(v,"2","个"),"G")
+        assertEquals("ESTIMATED",grams.quantityStatus)
+        val measured=NutritionCalculator.editQuantity(grams,"98")
+        assertEquals("KNOWN",measured.quantityStatus); assertEquals(v.estimatedFields,measured.snapshot.estimatedFields)
+        val incomplete=NutritionCalculator.editQuantity(measured,"60.")
+        assertEquals("60.",incomplete.draftQuantityText); assertNull(incomplete.quantity); assertNull(incomplete.derived.kcal)
+    }
     @Test fun actualLegacyFilePassesTheSameStrictValidator() {val f=File(System.getProperty("projectDir"),"../deliverables/个人旧记录_导入.json");if(f.exists()){val d=dataJson.decodeFromString<Dataset>(f.readText());Validation.dataset(d);assertEquals(3,d.bodies.size);assertEquals(2,d.meals.flatMap{it.items}.count{it.quantity==null});assertTrue(d.meals.none{it.note.contains("建议补餐")})}}
 }

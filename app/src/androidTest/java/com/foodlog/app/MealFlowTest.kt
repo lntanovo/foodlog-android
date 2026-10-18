@@ -21,17 +21,21 @@ class MealFlowTest {
             repo.restore(seed.copy(kind="FULL_BACKUP",meta=Meta()))
         }
         compose.onNodeWithContentDescription("记一餐").performClick()
-        compose.onNodeWithText("荞麦面").performScrollTo().performClick()
-        compose.waitUntil(10_000){compose.onAllNodesWithTag("本次份量（留空为待补）").fetchSemanticsNodes().isNotEmpty()}
-        compose.onNodeWithTag("本次份量（留空为待补）").performScrollTo().performTextInput("60")
+        compose.onNodeWithTag("meal-content").performScrollToNode(hasTestTag("choose-food-buckwheat_noodles_60g"))
+        compose.onNodeWithTag("choose-food-buckwheat_noodles_60g").performClick()
+        compose.onNodeWithTag("meal-content").performScrollToNode(hasTestTag("本次份量（留空为待补）"))
+        compose.onNodeWithTag("本次份量（留空为待补）").performTextInput("60")
         compose.activityRule.scenario.recreate()
-        compose.onNodeWithTag("本次份量（留空为待补）").performScrollTo().assertTextContains("60")
+        compose.onNodeWithTag("meal-content").performScrollToNode(hasTestTag("本次份量（留空为待补）"))
+        compose.onNodeWithTag("本次份量（留空为待补）").assertTextContains("60")
         compose.onNodeWithText("保存已吃").performClick()
         compose.waitUntil(15_000){compose.onAllNodesWithContentDescription("记一餐").fetchSemanticsNodes().isNotEmpty()}
+        compose.waitUntil(15_000){compose.onAllNodesWithText("已保存这餐").fetchSemanticsNodes().isEmpty()}
         compose.onNodeWithText("荞麦面").performScrollTo().assertExists()
         compose.onNodeWithText("编辑").performScrollTo().performClick()
-        compose.waitUntil(10_000){compose.onAllNodesWithTag("本次份量（留空为待补）").fetchSemanticsNodes().isNotEmpty()}
-        compose.onNodeWithTag("本次份量（留空为待补）").performScrollTo().performTextReplacement("120")
+        compose.waitUntil(10_000){compose.onAllNodesWithTag("meal-content").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithTag("meal-content").performScrollToNode(hasTestTag("本次份量（留空为待补）"))
+        compose.onNodeWithTag("本次份量（留空为待补）").performTextReplacement("120")
         compose.onNodeWithText("保存已吃").performClick()
         compose.waitUntil(15_000){compose.onAllNodesWithContentDescription("记一餐").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("120 g").performScrollTo().assertExists()

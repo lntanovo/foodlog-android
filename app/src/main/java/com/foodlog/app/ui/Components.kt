@@ -5,19 +5,22 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.foodlog.app.domain.*
 import java.time.LocalDate
 
 @Composable fun Section(title: String, subtitle: String? = null, content: @Composable ColumnScope.()->Unit) {
     Card(modifier=Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)) {
-        Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
             Text(title,style=MaterialTheme.typography.titleMedium)
             if(subtitle!=null) Text(subtitle,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             content()
@@ -32,7 +35,13 @@ import java.time.LocalDate
 @Composable fun Choices(values: List<String>, selected: String, onSelect: (String)->Unit) {
     @OptIn(ExperimentalLayoutApi::class)
     FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-        values.forEach{FilterChip(selected==it,onClick={onSelect(it)},label={Text(if(it=="G") "g" else if(it=="ML") "ml" else it)})}
+        values.forEach{FilterChip(selected==it,onClick={if(selected!=it) onSelect(it)},label={Text(if(it=="G") "g" else if(it=="ML") "ml" else it)},modifier=Modifier.heightIn(min=48.dp))}
+    }
+}
+@Composable fun CheckRow(label: String, checked: Boolean, change: (Boolean)->Unit, modifier: Modifier=Modifier) {
+    Row(modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(checked,role=Role.Checkbox,onValueChange=change),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+        Checkbox(checked,onCheckedChange=null)
+        Text(label,style=MaterialTheme.typography.bodyMedium,modifier=Modifier.padding(start=8.dp).weight(1f))
     }
 }
 @Composable fun DateButton(date: String, onChange: (String)->Unit, modifier: Modifier=Modifier) {

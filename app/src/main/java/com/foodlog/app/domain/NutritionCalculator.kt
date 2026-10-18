@@ -53,6 +53,28 @@ object NutritionCalculator {
         val factor = decimal(normalized).divide(decimal(v.basisQuantity, true), precision)
         return Nutrients.from(v.nutrients.copy(kcal = energy(v).value).values().map { it?.let { n -> (decimal(n) * factor).canonical() } })
     }
+    /** Convert the quantity while keeping the amount in the label's base unit constant. */
+    fun convertQuantity(v: FoodVersion, quantity: String?, fromUnit: String, toUnit: String): String? {
+        require(toUnit in listOf("G", "ML") || v.portions.any { it.name == toUnit }) { "不支持的份量单位" }
+        if (quantity == null) return null
+        if (fromUnit == toUnit) return quantity
+        val amount = decimal(normalize(v, quantity, fromUnit)!!)
+        return amount.divide(decimal(normalize(v, "1", toUnit)!!, true), precision).canonical()
+    }
+    fun changeUnit(item: MealItem, toUnit: String): MealItem {
+        require(item.draftQuantityText == null || runCatching { decimal(item.draftQuantityText) }.isSuccess) { "请先填写完整份量再切换单位" }
+        val amount = convertQuantity(item.snapshot, item.quantity, item.unit, toUnit)
+        // A converted estimated portion remains estimated until the user enters an actual measurement.
+        return item(item.snapshot, amount, toUnit, item.id, item.quantityStatus == "ESTIMATED")
+    }
+    fun editQuantity(item: MealItem, raw: String): MealItem {
+        require(raw.length <= 256) { "份量输入过长" }
+        val quantity = raw.takeIf { runCatching { decimal(it) }.isSuccess }
+        // Grams/ml entered by the user are an actual measurement. Label estimates stay on the snapshot.
+        return item(item.snapshot, quantity, item.unit, item.id,
+            estimated = item.unit !in listOf("G", "ML") && item.quantityStatus == "ESTIMATED")
+            .copy(draftQuantityText = raw)
+    }
     fun item(v: FoodVersion, quantity: String?, unit: String, id: String = uid(), estimated: Boolean = false): MealItem {
         val normalized = normalize(v, quantity, unit)
         return MealItem(id, v.foodId, v.id, quantity, unit,
