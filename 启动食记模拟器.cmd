@@ -1,0 +1,4 @@
+@echo off
+title FoodLog Android Emulator
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\start-emulator.ps1"
+if errorlevel 1 pause

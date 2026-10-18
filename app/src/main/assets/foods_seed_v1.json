@@ -1,0 +1,405 @@
+{
+  "schemaVersion": 1,
+  "kind": "FOOD_LIBRARY",
+  "exportedAt": "2026-10-18T00:00:00Z",
+  "meta": {
+    "datasetId": "81817080-e19e-534a-8306-80b16eb2fd3c"
+  },
+  "foods": [
+    {
+      "id": "93615975-f6e2-50c0-b0ab-b1eac9e6240e",
+      "seedId": "buckwheat_noodles_60g",
+      "activeVersionId": "e0c2e46f-c925-5ac2-b940-871aeb4eaca0",
+      "createdAt": "2026-10-18T00:00:00Z",
+      "updatedAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "3ad9d6df-51ef-5bbc-9a39-e4bbdee09125",
+      "seedId": "instant_duck_leg",
+      "activeVersionId": "149501c4-0147-586f-a98c-85eeadf30445",
+      "createdAt": "2026-10-18T00:00:00Z",
+      "updatedAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "a123a372-44bc-59c9-a965-3deb7c4b32ca",
+      "seedId": "plain_instant_oats",
+      "activeVersionId": "b533f47d-c43b-509d-ae0f-112a4b98f459",
+      "createdAt": "2026-10-18T00:00:00Z",
+      "updatedAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "51bcd0a6-b2b8-5f11-977f-6c99080883c7",
+      "seedId": "plain_soymilk_powder",
+      "activeVersionId": "50253fab-8951-5bfc-9a92-49767589dddd",
+      "createdAt": "2026-10-18T00:00:00Z",
+      "updatedAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "945b4241-edcf-5482-9d31-81941012f187",
+      "seedId": "eurasia_whole_milk_250g",
+      "activeVersionId": "9eee1a63-4267-575c-8610-2bca8cf19294",
+      "createdAt": "2026-10-18T00:00:00Z",
+      "updatedAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "ccbb865b-14b3-515b-8cd4-be2e2ee8a7b3",
+      "seedId": "mixed_nuts",
+      "activeVersionId": "35c0e3be-1302-5908-84ab-767ae49df3df",
+      "createdAt": "2026-10-18T00:00:00Z",
+      "updatedAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "fe44b792-af6d-56a3-8e33-a298b8f2ba70",
+      "seedId": "crispy_cereal_18g",
+      "activeVersionId": "2e1e6296-961b-5633-b367-397a2bf69017",
+      "createdAt": "2026-10-18T00:00:00Z",
+      "updatedAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "4947d30f-318a-5584-b3f4-e93e17dfc5a2",
+      "seedId": "cpt_protein_powder",
+      "activeVersionId": "c6295efc-e593-546f-bd54-0ab0a3e523b8",
+      "createdAt": "2026-10-18T00:00:00Z",
+      "updatedAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "49bf5784-39eb-5136-b6cf-df34962cf05e",
+      "seedId": "myprotein_chocolate_powder",
+      "activeVersionId": "6ecdbacc-6da0-594e-a729-d26dc7da3f70",
+      "createdAt": "2026-10-18T00:00:00Z",
+      "updatedAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "983ed795-90b2-5d62-bc83-584bdfd9f316",
+      "seedId": "tomato_raw_estimate",
+      "activeVersionId": "fcb1e761-10d8-5d48-8f61-c281c0aec06d",
+      "createdAt": "2026-10-18T00:00:00Z",
+      "updatedAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "7d064477-2ec0-567d-b334-b076322f3516",
+      "seedId": "egg_hard_boiled_estimate",
+      "activeVersionId": "e3c55063-5979-5971-9345-d0478f3554cc",
+      "createdAt": "2026-10-18T00:00:00Z",
+      "updatedAt": "2026-10-18T00:00:00Z"
+    }
+  ],
+  "versions": [
+    {
+      "id": "e0c2e46f-c925-5ac2-b940-871aeb4eaca0",
+      "foodId": "93615975-f6e2-50c0-b0ab-b1eac9e6240e",
+      "versionNo": 1,
+      "name": "荞麦面",
+      "basisQuantity": "100",
+      "basisUnit": "G",
+      "labelKcal": null,
+      "labelKj": "1547",
+      "tableKcal": null,
+      "nutrients": {
+        "protein": "13.6",
+        "carbs": "77.4",
+        "fat": "0",
+        "sodium": "31",
+        "fiber": null
+      },
+      "portions": [
+        {
+          "name": "袋",
+          "amount": "60",
+          "unit": "G",
+          "estimated": false
+        }
+      ],
+      "sourceKind": "PACKAGE_LABEL",
+      "sourceText": "用户提供的包装营养表；2026-10-15照片核对一致；",
+      "sourceUrl": "",
+      "weighingBasis": "干重",
+      "estimatedFields": [],
+      "createdAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "149501c4-0147-586f-a98c-85eeadf30445",
+      "foodId": "3ad9d6df-51ef-5bbc-9a39-e4bbdee09125",
+      "versionNo": 1,
+      "name": "即食鸭腿",
+      "basisQuantity": "100",
+      "basisUnit": "G",
+      "labelKcal": null,
+      "labelKj": "770",
+      "tableKcal": null,
+      "nutrients": {
+        "protein": "33.4",
+        "carbs": "1.2",
+        "fat": "4.9",
+        "sodium": "726",
+        "fiber": null
+      },
+      "portions": [],
+      "sourceKind": "PACKAGE_LABEL",
+      "sourceText": "2026-10-15用户提供的包装照片；整袋净含量待补充；不按带骨总重计算，不默认一只等于100g；皮若不吃，不能精确拆分标签宏量，需标估算。",
+      "sourceUrl": "",
+      "weighingBasis": "包装每100g；日常暂按去骨后实际可食重量套用，照片未见可食部口径说明",
+      "estimatedFields": [],
+      "createdAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "b533f47d-c43b-509d-ae0f-112a4b98f459",
+      "foodId": "a123a372-44bc-59c9-a965-3deb7c4b32ca",
+      "versionNo": 1,
+      "name": "纯即食燕麦",
+      "basisQuantity": "100",
+      "basisUnit": "G",
+      "labelKcal": null,
+      "labelKj": "1561",
+      "tableKcal": null,
+      "nutrients": {
+        "protein": "12",
+        "carbs": "55.2",
+        "fat": "8.6",
+        "sodium": "7",
+        "fiber": "12.6"
+      },
+      "portions": [],
+      "sourceKind": "PACKAGE_LABEL",
+      "sourceText": "2026-10-15用户提供的包装照片；膳食纤维单列，不再次加进标签碳水；与脆麦片是不同食品。",
+      "sourceUrl": "",
+      "weighingBasis": "干重",
+      "estimatedFields": [],
+      "createdAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "50253fab-8951-5bfc-9a92-49767589dddd",
+      "foodId": "51bcd0a6-b2b8-5f11-977f-6c99080883c7",
+      "versionNo": 1,
+      "name": "纯豆浆粉",
+      "basisQuantity": "100",
+      "basisUnit": "G",
+      "labelKcal": null,
+      "labelKj": "1875",
+      "tableKcal": null,
+      "nutrients": {
+        "protein": "40",
+        "carbs": "12",
+        "fat": "24.4",
+        "sodium": "200",
+        "fiber": "11"
+      },
+      "portions": [
+        {
+          "name": "袋",
+          "amount": "20",
+          "unit": "G",
+          "estimated": false
+        }
+      ],
+      "sourceKind": "PACKAGE_LABEL",
+      "sourceText": "2026-10-15用户提供的包装照片；2026-10-15补充正面照片确认20g/袋；加水不增加能量，用奶冲需另计奶；不能当作脱脂蛋白粉。",
+      "sourceUrl": "",
+      "weighingBasis": "冲泡前干粉重量",
+      "estimatedFields": [],
+      "createdAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "9eee1a63-4267-575c-8610-2bca8cf19294",
+      "foodId": "945b4241-edcf-5482-9d31-81941012f187",
+      "versionNo": 1,
+      "name": "欧亚牧场纯牛奶",
+      "basisQuantity": "250",
+      "basisUnit": "G",
+      "labelKcal": null,
+      "labelKj": "670",
+      "tableKcal": null,
+      "nutrients": {
+        "protein": "7.8",
+        "carbs": "12.6",
+        "fat": "9",
+        "sodium": "138",
+        "fiber": null
+      },
+      "portions": [
+        {
+          "name": "盒",
+          "amount": "250",
+          "unit": "G",
+          "estimated": false
+        }
+      ],
+      "sourceKind": "PACKAGE_LABEL",
+      "sourceText": "2026-10-15用户提供的包装照片，营养表按每份即每盒250g标注；乳糖已包含在碳水中，不另加；标签每盒250g是一份，不能当每100g数值。",
+      "sourceUrl": "",
+      "weighingBasis": "净重g；默认按盒计，不将250g误写为标签确认的250ml",
+      "estimatedFields": [],
+      "createdAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "35c0e3be-1302-5908-84ab-767ae49df3df",
+      "foodId": "ccbb865b-14b3-515b-8cd4-be2e2ee8a7b3",
+      "versionNo": 1,
+      "name": "混合坚果",
+      "basisQuantity": "100",
+      "basisUnit": "G",
+      "labelKcal": null,
+      "labelKj": "2688",
+      "tableKcal": null,
+      "nutrients": {
+        "protein": "17.1",
+        "carbs": "18.7",
+        "fat": "54.7",
+        "sodium": "10",
+        "fiber": "6.5"
+      },
+      "portions": [],
+      "sourceKind": "PACKAGE_LABEL",
+      "sourceText": "2026-10-15用户提供的包装照片；默认先建议10–15g并随全天脂肪调整，不按随手一把估算。",
+      "sourceUrl": "",
+      "weighingBasis": "实际食用重量",
+      "estimatedFields": [],
+      "createdAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "2e1e6296-961b-5633-b367-397a2bf69017",
+      "foodId": "fe44b792-af6d-56a3-8e33-a298b8f2ba70",
+      "versionNo": 1,
+      "name": "脆麦片",
+      "basisQuantity": "100",
+      "basisUnit": "G",
+      "labelKcal": null,
+      "labelKj": "1559",
+      "tableKcal": null,
+      "nutrients": {
+        "protein": "12.4",
+        "carbs": "68.5",
+        "fat": "2.4",
+        "sodium": "60",
+        "fiber": "11.8"
+      },
+      "portions": [],
+      "sourceKind": "PACKAGE_LABEL",
+      "sourceText": "2026-10-16用户提供的包装照片；替代之前仅18g/67kcal的记录；",
+      "sourceUrl": "",
+      "weighingBasis": "干重",
+      "estimatedFields": [],
+      "createdAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "c6295efc-e593-546f-bd54-0ab0a3e523b8",
+      "foodId": "4947d30f-318a-5584-b3f4-e93e17dfc5a2",
+      "versionNo": 1,
+      "name": "康比特蛋白粉",
+      "basisQuantity": "100",
+      "basisUnit": "G",
+      "labelKcal": null,
+      "labelKj": "1548",
+      "tableKcal": null,
+      "nutrients": {
+        "protein": "88",
+        "carbs": "2.2",
+        "fat": "0.4",
+        "sodium": "20",
+        "fiber": null
+      },
+      "portions": [],
+      "sourceKind": "PACKAGE_LABEL",
+      "sourceText": "2026-10-16用户提供的包装照片；",
+      "sourceUrl": "",
+      "weighingBasis": "干粉重量",
+      "estimatedFields": [],
+      "createdAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "6ecdbacc-6da0-594e-a729-d26dc7da3f70",
+      "foodId": "49bf5784-39eb-5136-b6cf-df34962cf05e",
+      "versionNo": 1,
+      "name": "熊猫蛋白粉",
+      "basisQuantity": "100",
+      "basisUnit": "G",
+      "labelKcal": "376",
+      "labelKj": "1590",
+      "tableKcal": null,
+      "nutrients": {
+        "protein": "73",
+        "carbs": "6.5",
+        "fat": "6.2",
+        "sodium": "172",
+        "fiber": null
+      },
+      "portions": [],
+      "sourceKind": "PACKAGE_LABEL",
+      "sourceText": "2026-10-16用户提供的包装照片；MYPROTEIN柔滑巧克力味；热量直接使用包装376kcal，不用1590kJ换算覆盖。钠为盐0.43g÷2.5×1000估算；中外标签勺重有差异，始终按实际干粉克数。",
+      "sourceUrl": "",
+      "weighingBasis": "干粉重量",
+      "estimatedFields": [
+        "sodium"
+      ],
+      "createdAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "fcb1e761-10d8-5d48-8f61-c281c0aec06d",
+      "foodId": "983ed795-90b2-5d62-bc83-584bdfd9f316",
+      "versionNo": 1,
+      "name": "生番茄（估算）",
+      "basisQuantity": "100",
+      "basisUnit": "G",
+      "labelKcal": null,
+      "labelKj": null,
+      "tableKcal": "18",
+      "nutrients": {
+        "protein": "0.88",
+        "carbs": "3.89",
+        "fat": "0.2",
+        "sodium": "5",
+        "fiber": "1.2"
+      },
+      "portions": [
+        {
+          "name": "个",
+          "amount": "150",
+          "unit": "G",
+          "estimated": true
+        }
+      ],
+      "sourceKind": "AVERAGE_ESTIMATE",
+      "sourceText": "USDA常见生红番茄平均值，2026-10-18核对；非用户包装数据；未称重的中等大小番茄暂按可食150g估算，大小差异较大，实际称重优先。用户询问营养，不据此新增当天实际摄入。",
+      "sourceUrl": "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/4458/Aacps/b408760e-d7db-408a-84d9-517bbc3033d1/Tomatoes_-_Cherry__Fresh.pdf?disposition=inline",
+      "weighingBasis": "生重可食部分",
+      "estimatedFields": [
+        "all"
+      ],
+      "createdAt": "2026-10-18T00:00:00Z"
+    },
+    {
+      "id": "e3c55063-5979-5971-9345-d0478f3554cc",
+      "foodId": "7d064477-2ec0-567d-b334-b076322f3516",
+      "versionNo": 1,
+      "name": "水煮全蛋（估算）",
+      "basisQuantity": "100",
+      "basisUnit": "G",
+      "labelKcal": null,
+      "labelKj": null,
+      "tableKcal": "155",
+      "nutrients": {
+        "protein": "12.58",
+        "carbs": "1.12",
+        "fat": "10.6",
+        "sodium": "124",
+        "fiber": "0"
+      },
+      "portions": [
+        {
+          "name": "个",
+          "amount": "50",
+          "unit": "G",
+          "estimated": true
+        }
+      ],
+      "sourceKind": "AVERAGE_ESTIMATE",
+      "sourceText": "University Hospitals营养资料库的常见水煮全蛋平均值，2026-10-18核对；非用户包装数据；普通鸡蛋未称重时暂按去壳50g估算，每个77.5kcal/P6.29/C0.56/F5.3。用户已说明水煮，按未额外调味和加油计算；不据询问新增当天实际摄入。",
+      "sourceUrl": "https://www.uhhospitals.org/health-information/health-and-wellness-library/article/nutritionfacts-v1/egg-whole-cooked-hard-boiled-1-large?sc_device=UHNow",
+      "weighingBasis": "煮熟去壳后可食重量，包含蛋白和蛋黄",
+      "estimatedFields": [
+        "all"
+      ],
+      "createdAt": "2026-10-18T00:00:00Z"
+    }
+  ]
+}
