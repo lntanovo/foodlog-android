@@ -146,7 +146,7 @@ class QuotaTest {
             root["days"]=JsonArray(root.getValue("days").jsonArray.map { JsonObject(it.jsonObject.filterKeys { key -> key!="dietDayType" }) })
             root["plans"]=JsonArray(root.getValue("plans").jsonArray.map { JsonObject(it.jsonObject.filterKeys { key -> key!="flex" }) })
             val imported=repo.parse(JsonObject(root).toString())
-            assertEquals(3,imported.schemaVersion); assertEquals("1.2.1",imported.appVersion)
+            assertEquals(3,imported.schemaVersion); assertEquals(com.foodlog.app.BuildConfig.VERSION_NAME,imported.appVersion)
             assertNull(imported.days.single().dietDayType); assertNull(imported.plans.single().flex)
             assertEquals("TRAINING",effectiveDietDayType(imported.days.single()))
             assertEquals(old.targets,imported.targets)

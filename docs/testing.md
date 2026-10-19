@@ -1,3 +1,34 @@
+# 1.3.0 账号与云备份验收 / Cloud backup validation
+
+执行日期：2026-10-19（Asia/Shanghai）。版本 1.3.0 / versionCode 6，JDK 17、SDK 35；两个独立 Android 15 测试模拟器。所有云端上传均为合成数据，未上传用户的真实记录。未操作用户正常使用的模拟器或实体手机数据。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| 构建、Lint | assembleDebug、assembleDebugAndroidTest 成功；Lint 0 errors，2 条现有 KTX 风格警告 |
+| 单元与数据库 | 108 项通过，0 失败/跳过；包括认证、刷新竞争、会话持久化、传输校验、中断任务与恢复保护 |
+| 本地仪器测试 | 24 项通过：23 项整套回归通过，本地导出/恢复用例在等待成功提示消失后单项重跑通过；另一个需显式参数的真实云测试默认跳过 |
+| 新云界面 | 未登录仍可实际记餐；取消登录不改数据；Activity 重建保留用户名、清空密码；均通过 |
+| 两台设备真实云流程 | A 用户令牌上传完整合成备份并重复提交同 ID；B 同账号下载、校验、恢复；所有业务实体一致，B 恢复前副本可正确读取；退出不改变本机记录。两次独立仪器运行均通过 |
+| 真实云权限 | 两账号成功登录；B 看不到 A 的清单，不能获取 A 的私有下载地址或写 A 的路径；伪造 owner、更新/删除清单、覆盖旧对象均被拒绝；匿名清单不可访问 |
+| 覆盖升级 | 1.2.1（code 5）→ 1.3.0（code 6），同签名覆盖安装及重启后，逐表内容完整保留，Room 仍 v2 |
+| 升级合成记录 | 11 食品、11 标签版本、2 餐食（含草稿）、1 日志、4 身体记录、1 计划、1 日目标、1 来源、1 常用餐和完整 metadata |
+| Python 旧数据转换 | 4 项通过 |
+| 电脑一键启动 | CheckOnly 识别新版 APK，保留 FoodLogTest 原数据；未为检查清除正常测试环境 |
+| 发布包签名 | 与既有发布版本的证书 SHA-256 相同：`7fec875947abc24ddfcf9e864ea79487f4605de7562daa995221051b385e41e2` |
+
+真实 Auth 刷新返回新的令牌对；该环境在短时间内也接受旧刷新令牌，不能宣称服务端立即作废旧令牌。客户端仍串行刷新、原子保存最新令牌对，并检查账号身份。错误、验证码或服务不可用均只影响云操作。
+
+恢复前保护副本通过临时文件、fsync、完整解析校验与原子移动后才允许提交数据库事务。另有单测验证过期预览和提交前账号变化均保留原业务内容。完整合法空备份仍会替换记录，因此界面明确显示各项数量、减少提示和确认按钮。
+
+CloudBase AUTH/PG/STORAGE 语义复审完成：服务端 schema、列权限及用户身份 RLS 与客户端匹配；无管理 Key，私有签名下载不转发 Bearer、不跟随重定向。已检查[设置页截图](screenshots/1.3.0/settings-cloud-light.png)。测试后移除合成云对象、清单及两个临时账号，并确认临时清理策略已撤销；真实使用账号已验证可登录且无合成备份。
+
+以下仍未逐一验证：实体手机、其他厂商系统、实际磁盘耗尽或断电硬件故障。云服务有效期/额度以控制台为准，过期不影响本地记录；应定期导出独立文件。未实现微信登录、自行注册、自动合并或自动更新。
+
+**English:** Version 1.3.0 passed 108 unit/database tests, build/Lint checks, 24 local instrumentation cases (including a successful targeted rerun after waiting for an export snackbar), four Python conversion tests, and a real two-emulator upload/restore. The parameter-gated live cloud test is skipped in an ordinary offline suite and was run separately on both devices. Real user-token checks verified cross-account isolation and immutability. A same-signature update from code 5 to 6 preserved every business table, including drafts, templates, targets and four body rows. Test cloud files/accounts and their temporary cleanup policy were removed. Physical phones, vendor systems and hardware power-loss/storage-exhaustion scenarios remain unverified. Local records do not depend on cloud availability; keep independent exported backups.
+
+---
+
+
 # 1.2.1 验收记录
 
 修复趋势页编辑历史体重时意外更改图表截止日期的问题。执行日期：2026-10-19（Asia/Shanghai）；versionCode 5，Room v2 与备份格式 v3 保持兼容。

@@ -4,6 +4,18 @@
 
 Every version has a Git tag, source snapshot and downloadable APK. These are development builds signed with the same local debug key.
 
+## [1.3.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.3.0)
+
+- 新增可选用户名密码登录、私有不可变版本云备份和跨设备预览恢复；登录、退出与网络失败不影响本机记录。
+- 恢复前保护副本加入文件落盘、校验与原子完成；锁内核对本机修订号及账号，防止过期预览替换后续编辑。
+- 加密保存令牌、串行刷新、重建后手动重试中断任务；不自动合并、注册或检查更新。
+- versionCode 6，Room v2 与备份格式 v3 保持兼容，同签名覆盖安装保留记录。
+
+- Added optional username/password accounts, private immutable cloud backup versions and reviewed cross-device restore. Local records remain independent of login and networking.
+- Strengthened pre-restore protection with fsync, validation and atomic completion; verify local revision and account inside the restore lock.
+- Encrypt session tokens, serialize refresh and resume interrupted work only on explicit user action. No automatic merging, registration or app update checks.
+- Version code 6; Room v2 and backup schema v3 remain compatible, with same-signature in-place updates.
+
 ## [1.2.1](https://github.com/lntanovo/foodlog-android/releases/tag/v1.2.1)
 
 - 修复编辑或补记历史体重时，趋势图截止日期跟随记录日期变化、较新记录因而不显示的问题。

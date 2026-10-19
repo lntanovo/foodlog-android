@@ -15,6 +15,9 @@ import kotlinx.serialization.json.decodeFromStream
 import java.io.*
 import java.time.Instant
 import java.time.LocalDate
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.util.UUID
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 
@@ -104,7 +107,7 @@ class Repository(private val context: Context, val db: FoodLogDatabase) {
         d.templates.filter { oldTemplates[it.id] != it }.forEach { dao.put(TemplateRow(it.id,dataJson.encodeToString(it))) }
         val meta=d.meta.copy(revision=d.meta.revision+1)
         dao.put(MetaRow(json=dataJson.encodeToString(meta)))
-        cached=d.copy(schemaVersion=3,appVersion="1.2.1",meta=meta)
+        cached=d.copy(schemaVersion=3,appVersion=com.foodlog.app.BuildConfig.VERSION_NAME,meta=meta)
     }
     private suspend fun mutate(block: (Dataset)->Dataset) = lock.withLock {
         transaction { val old=read(); val next=block(old); Validation.dataset(next); if(next!=old) persist(next,old) }
@@ -266,7 +269,7 @@ class Repository(private val context: Context, val db: FoodLogDatabase) {
 
     private fun upgraded(d: Dataset): Dataset {
         Validation.dataset(d)
-        return d.copy(schemaVersion=3,appVersion="1.2.1")
+        return d.copy(schemaVersion=3,appVersion=com.foodlog.app.BuildConfig.VERSION_NAME)
     }
     fun parse(text: String): Dataset {
         require(text.length.toLong()<=MAX_BACKUP_BYTES) { "备份解压后不能超过256MiB" }
@@ -310,21 +313,39 @@ class Repository(private val context: Context, val db: FoodLogDatabase) {
     }
     suspend fun recoveryBackup(): File = withContext(Dispatchers.IO) {
         val dir=File(context.filesDir,"recovery").apply{mkdirs()}
-        File(dir,"before-restore-${Instant.now().toEpochMilli()}.json.gz").also { file ->
-            try { file.outputStream().use { writeBackup(it) } }
-            catch(error: Exception) { file.delete(); throw error }
+        check(dir.isDirectory) { "无法创建恢复前保护副本，恢复已停止" }
+        val file=File(dir,"before-restore-${Instant.now().toEpochMilli()}-${UUID.randomUUID()}.json.gz")
+        val partial=File(dir,file.name+".partial")
+        try {
+            FileOutputStream(partial).use { output ->
+                // GZIP closes its wrapper; keep the descriptor open until fsync completes.
+                writeBackup(object: FilterOutputStream(output) { override fun close() { flush() } })
+                output.fd.sync()
+            }
+            partial.inputStream().use { readBackup(it) }
+            Files.move(partial.toPath(),file.toPath(),StandardCopyOption.ATOMIC_MOVE)
+            file
+        } catch(error: Throwable) {
+            partial.delete()
+            throw error
         }
     }
-    suspend fun restore(d: Dataset): File = lock.withLock {
+    suspend fun restore(d: Dataset, expectedLocalDatasetId: String? = null, expectedLocalRevision: Long? = null, preflight: (() -> Unit)? = null): File = lock.withLock {
         require(d.kind=="FULL_BACKUP"); Validation.dataset(d)
+        preflight?.invoke()
+        if(expectedLocalDatasetId!=null || expectedLocalRevision!=null) {
+            val current=snapshot().meta
+            check(current.datasetId==expectedLocalDatasetId && current.revision==expectedLocalRevision) { "本机记录已发生变化，请重新核对恢复预览" }
+        }
         val recovery = recoveryBackup()
         transaction {
+            preflight?.invoke()
             dao.clearFoods();dao.clearVersions();dao.clearMeals();dao.clearDays();dao.clearBodies();dao.clearPlans();dao.clearTargets();dao.clearOrigins();dao.clearTemplates()
-            persist(d.copy(schemaVersion=3,appVersion="1.2.1"))
+            persist(d.copy(schemaVersion=3,appVersion=com.foodlog.app.BuildConfig.VERSION_NAME))
         }
         recovery
     }
-    fun latestRecovery(): File? = File(context.filesDir,"recovery").listFiles()?.maxByOrNull{it.lastModified()}
+    fun latestRecovery(): File? = File(context.filesDir,"recovery").listFiles()?.filter { it.isFile && it.name.endsWith(".json.gz") }?.maxByOrNull{it.lastModified()}
     fun conflicts(current: Dataset, incoming: Dataset): Set<String> {
         val old=current.origins.associateBy{it.namespace+":"+it.key}
         val changedEntities=incoming.origins.filter { o-> old[o.namespace+":"+o.key]?.let { it.fingerprint!=o.fingerprint }?:false }.map{it.entityId}.toSet()

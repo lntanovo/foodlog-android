@@ -63,8 +63,13 @@ class TransferFlowTest {
         compose.onNodeWithText("导出完整备份").performScrollTo().performClick()
         compose.waitUntil(15_000){runBlocking{repo.snapshot().meta.lastExport!=null}}
         runBlocking {repo.deleteMeal(repo.snapshot().meals.single().id)}
+        compose.waitUntil(15_000) { compose.onAllNodes(hasText("从完整备份恢复…") and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
+        // Snackbar can cover the button after this longer settings page scrolls it into view.
+        compose.waitUntil(15_000) { compose.onAllNodesWithText("文件已导出").fetchSemanticsNodes().isEmpty() }
         compose.onNodeWithText("从完整备份恢复…").performScrollTo().performClick()
-        compose.waitUntil(15_000){compose.onAllNodesWithText("预览完整恢复").fetchSemanticsNodes().isNotEmpty()}
+        try { compose.waitUntil(15_000){compose.onAllNodesWithText("预览完整恢复").fetchSemanticsNodes().isNotEmpty()} }
+        catch(error:Throwable) { throw AssertionError(compose.onRoot().printToString(),error) }
         compose.onNodeWithText("确认替换并恢复").performClick()
         compose.waitUntil(15_000){runBlocking{repo.snapshot().meals.size==1}}
         assertNotNull(repo.latestRecovery())

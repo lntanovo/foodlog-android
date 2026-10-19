@@ -21,7 +21,7 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
     save = { ArrayList(it) }, restore = { it.toSet() }
 )
 
-@Composable fun SettingsScreen(vm: AppViewModel, data: Dataset, transfer: TransferViewModel = viewModel()) {
+@Composable fun SettingsScreen(vm: AppViewModel, data: Dataset, transfer: TransferViewModel = viewModel(), cloud: CloudBackupViewModel = viewModel()) {
     var profile by rememberSaveable { mutableStateOf(false) }
     var libraryDialog by rememberSaveable { mutableStateOf(false) }
     var libraryExpanded by rememberSaveable { mutableStateOf(false) }
@@ -32,6 +32,7 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
     val incoming by transfer.incoming.collectAsState()
     val busy by transfer.busy.collectAsState()
     val transferError by transfer.error.collectAsState()
+    val cloudBlocking by cloud.blockLocalTransfer.collectAsState()
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gzip"), transfer::picked)
     val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument(), transfer::picked)
     LaunchedEffect(transfer) { for (notice in transfer.notices) vm.notices.send(Notice(notice)) }
@@ -42,11 +43,11 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
             "IMPORT_READY" -> { if(transfer.pickerLaunched()) open.launch(arrayOf("*/*")) }
         }
     }
-    val canStart = task == null && !busy
+    val canStart = task == null && !busy && !cloudBlocking
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("设置", style = MaterialTheme.typography.headlineLarge)
-            Text("个人资料、外观与本机备份", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("个人资料、外观与数据备份", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (task != null || transferError != null) Section("文件操作", if (busy) "正在处理，请稍候" else "操作进度会保留，切换页面后可继续") {
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -67,7 +68,8 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
                 ?: "可以只记录饮食，也可以设置自己的每日配额。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onClick = { vm.tab(3) }, modifier = Modifier.fillMaxWidth()) { Text("配额与每日标签") }
         }
-        Section("数据备份与恢复", "完整备份保存在你选择的位置，建议定期导出。") {
+        CloudBackupSection(vm, data, cloud, transfer)
+        Section("本地备份与恢复", "完整备份可另存电脑，不依赖账号或云服务有效期。建议定期导出。") {
             Text("最近完整导出：${data.meta.lastExport?.let { java.time.Instant.parse(it).atZone(ZoneId.of(data.meta.timezone)).toLocalDateTime().toString().replace('T', ' ') } ?: "尚未导出"}", style = MaterialTheme.typography.bodySmall)
             Button(enabled = canStart, onClick = { transfer.prepareExport("食记_完整备份_${LocalDate.now(ZoneId.of(data.meta.timezone))}.foodlog.gz") }, modifier = Modifier.fillMaxWidth()) { Text("导出完整备份") }
             OutlinedButton(enabled = canStart, onClick = { transfer.prepareImport("FULL_BACKUP") }, modifier = Modifier.fillMaxWidth()) { Text("从完整备份恢复…") }
@@ -85,7 +87,7 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
                 Text("深色外观")
                 Switch(dark ?: androidx.compose.foundation.isSystemInDarkTheme(), { vm.theme(it) })
             }
-            Text("食记 1.2.0 · 本地离线版", style = MaterialTheme.typography.titleSmall)
+            Text("食记 ${com.foodlog.app.BuildConfig.VERSION_NAME} · 本地记录与可选云备份", style = MaterialTheme.typography.titleSmall)
             Text("未知营养留空，真实零值填0；估算信息单独标记。完整备份包含全部文字数据，食品分享文件不包含个人记录。目标均为自设配额。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

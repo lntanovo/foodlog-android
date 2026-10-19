@@ -47,3 +47,9 @@
 食品库导入时已有同ID食品保留本机当前版本，已有不可变版本ID内容冲突则拒绝整次导入。旧数据冲突替换只替换明确选择日期的餐食及文件提供的身体/训练值，日目标仍保留已有快照，需用户在当天明确重算。
 
 不备份图片，因为当前未创建照片附件。DataStore外观设置不是业务数据，不含在完整备份中；业务个人资料、全部食品版本、草稿和常用餐均包含。
+# 1.3.0 云备份补充
+
+本地业务备份格式继续使用 schemaVersion 3；账号和令牌不写入 Dataset。云端以独立的 `foodlog_backups` 清单记录服务端归属/时间、不可变 UUID、文件 SHA-256/字节数、版本及记录摘要。`client_revision` 只用于核对文件与本机预览，不作为跨设备新旧排序；清单按服务端创建时间及备份 ID 排序。云端无备份不能解释为空 Dataset，恢复必须通过下载校验与明确确认。
+
+The local business format remains schemaVersion 3. Accounts and tokens never enter Dataset. Cloud metadata stores server-assigned ownership/time, immutable IDs, SHA-256, size, versions and summaries. Local revision checks integrity and stale previews; it does not order cross-device changes. An empty cloud list never becomes an empty restore. See [cloud backup](cloud-backup.md).
+

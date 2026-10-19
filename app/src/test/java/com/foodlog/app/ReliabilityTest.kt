@@ -137,7 +137,7 @@ class ReliabilityTest {
         val original=repo.snapshot().copy(schemaVersion=1,appVersion="1.0.0")
         val json=dataJson.encodeToString(original)
         val parsed=repo.parse(json)
-        assertEquals(3,parsed.schemaVersion); assertEquals("1.2.1",parsed.appVersion)
+        assertEquals(3,parsed.schemaVersion); assertEquals(com.foodlog.app.BuildConfig.VERSION_NAME,parsed.appVersion)
         val bytes=ByteArrayOutputStream(); GZIPOutputStream(bytes).use { it.write(json.toByteArray()) }
         assertEquals(parsed,repo.readBackup(ByteArrayInputStream(bytes.toByteArray())))
         val current=ByteArrayOutputStream(); repo.writeBackup(current)
