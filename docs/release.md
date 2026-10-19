@@ -1,10 +1,14 @@
 # 安装、更新与签名
 
-公开仓库：[lntanovo/foodlog-android](https://github.com/lntanovo/foodlog-android)。当前交付 **debug APK**：[foodlog-1.2.0-debug.apk](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.0/foodlog-1.2.0-debug.apk)，applicationId `com.foodlog.app`，versionCode **4**，versionName **1.2.0**，minSdk26。各版本安装包与校验文件见 [GitHub Releases](https://github.com/lntanovo/foodlog-android/releases)。
+公开仓库：[lntanovo/foodlog-android](https://github.com/lntanovo/foodlog-android)。当前交付 **debug APK**：[foodlog-1.2.1-debug.apk](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.1/foodlog-1.2.1-debug.apk)，applicationId `com.foodlog.app`，versionCode **5**，versionName **1.2.1**，minSdk26。各版本安装包与校验文件见 [GitHub Releases](https://github.com/lntanovo/foodlog-android/releases)。
 
-1.2.0沿用本机1.0.0（versionCode 2）、1.1.0（versionCode 3）的debug签名，可直接覆盖升级；无需卸载旧版。Room结构仍为v2，新增业务字段保存在原JSON列；v1数据库仍通过显式 `MIGRATION_1_2` 升到v2，只新增常用餐表，保留食品、历史版本、餐食、草稿、身体记录、目标与来源记录。备份格式更新为schemaVersion 3，v1/v2 JSON或GZIP备份及个人迁移文件继续支持。v3备份应通过新版应用恢复。
+1.2.1沿用本机1.0.0（versionCode 2）、1.1.0（versionCode 3）、1.2.0（versionCode 4）的debug签名，可直接覆盖升级；无需卸载旧版。Room结构仍为v2，新增业务字段保存在原JSON列；v1数据库仍通过显式 `MIGRATION_1_2` 升到v2，只新增常用餐表，保留食品、历史版本、餐食、草稿、身体记录、目标与来源记录。备份格式保持schemaVersion 3，v1/v2 JSON或GZIP备份及个人迁移文件继续支持。v3备份应通过新版应用恢复。
 
-本次更新增加底部“配额”入口：按参考体重和用户自己选择的碳蛋脂系数生成训练日、休息日、放纵日参考，也支持直接填写克数。放纵日可仅标记、不设配额。首页简化为三种日型、已记录/参考碳蛋脂和主要录入入口，次要营养与餐食操作按需展开。饮食标签独立于实际训练；参考体重独立于晨重；不自动采用图片中的经验系数。
+1.2.1修复趋势图日期截断：编辑或补记历史体重只保存所编辑日期的数据，不再改变图表截止日期。顶部明确显示“截至”日期，查看历史范围时提供“回到今天”；曲线注明日期范围与标准晨重点数，非标准称重保留在下方日期记录，并提示不计入晨重曲线与均值。
+
+已用合成数据验证从1.2.0（versionCode 4）覆盖升级至1.2.1（versionCode 5），4条身体记录及其他全部业务表完整保留。构建、65项单元／数据库测试与Lint已通过；本次界面回归结果以 `docs/testing.md` 为准。
+
+1.2.0增加底部“配额”入口：按参考体重和用户自己选择的碳蛋脂系数生成训练日、休息日、放纵日参考，也支持直接填写克数。放纵日可仅标记、不设配额。首页简化为三种日型、已记录/参考碳蛋脂和主要录入入口，次要营养与餐食操作按需展开。饮食标签独立于实际训练；参考体重独立于晨重；不自动采用图片中的经验系数。
 
 新建计划保留已有日目标快照，切换标签只更新所选日期；重复选择同标签不重算。“配额 → 用于所选日期”确认后才按该日期生效的计划明确更新。未配置放纵日配额时不沿用训练日数值。旧记录和旧目标日型继续兼容，完整备份包含三类配额与日期标签，食品库不夹带这些个人设置。此前草稿、常用餐、复制昨天及备份恢复功能保留。详见README与数据格式说明。
 

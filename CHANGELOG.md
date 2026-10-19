@@ -4,6 +4,18 @@
 
 Every version has a Git tag, source snapshot and downloadable APK. These are development builds signed with the same local debug key.
 
+## [1.2.1](https://github.com/lntanovo/foodlog-android/releases/tag/v1.2.1)
+
+- 修复编辑或补记历史体重时，趋势图截止日期跟随记录日期变化、较新记录因而不显示的问题。
+- 趋势顶部明确显示“截至”日期，查看历史范围时可“回到今天”。
+- 曲线显示日期范围与标准晨重点数；非标准称重保留在日期记录中，并提示不计入曲线与均值。
+- versionCode 升为 5；数据库结构与备份格式不变，同签名覆盖升级保留记录。
+
+- Fixed historical weigh-in edits changing the trend end date and hiding newer records from the displayed range.
+- Show an explicit chart end date and a return-to-today action when viewing a historical range.
+- State the chart range and standard morning-weight sample count. Retain nonstandard weigh-ins in date records with a note that they are excluded from the chart and averages.
+- Raised versionCode to 5. Database and backup formats are unchanged; same-signature updates preserve records.
+
 ## [1.2.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.2.0)
 
 - 新增底部配额页；分别配置训练日、休息日、放纵日的体重系数或每日克数。
@@ -42,6 +54,6 @@ Every version has a Git tag, source snapshot and downloadable APK. These are dev
 
 ## 归档说明 / Archive notes
 
-Git 历史从保留的各版本源码快照恢复，导入提交创建于发布整理期间，不代表原开发时间。公开快照去除了个人路径和记录，迁移测试使用合成数据；各版本 Android 应用代码与其原始 APK 对应，APK 字节未改动。示例界面参数不构成预设配额。
+1.0.0、1.1.0、1.2.0 的 Git 历史从保留的源码快照恢复，导入提交创建于发布整理期间，不代表原开发时间。1.2.1 及后续版本使用正常开发提交。公开快照去除了个人路径和记录，迁移测试使用合成数据；各版本 Android 应用代码与其原始 APK 对应，APK 字节未改动。示例界面参数不构成预设配额。
 
-Git history was reconstructed from retained source archives. Import commits were created during publication, not backdated to development. Personal paths and records were removed and migration tests use synthetic data. Android application code corresponds to each original APK; APK bytes are unchanged. Screenshot values are examples, not preset targets.
+Git history for 1.0.0, 1.1.0 and 1.2.0 was reconstructed from retained source archives. Import commits were created during publication, not backdated to development. Version 1.2.1 and later use regular development commits. Personal paths and records were removed and migration tests use synthetic data. Android application code corresponds to each original APK; APK bytes are unchanged. Screenshot values are examples, not preset targets.

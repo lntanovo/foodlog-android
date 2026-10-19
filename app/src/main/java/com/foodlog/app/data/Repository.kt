@@ -104,7 +104,7 @@ class Repository(private val context: Context, val db: FoodLogDatabase) {
         d.templates.filter { oldTemplates[it.id] != it }.forEach { dao.put(TemplateRow(it.id,dataJson.encodeToString(it))) }
         val meta=d.meta.copy(revision=d.meta.revision+1)
         dao.put(MetaRow(json=dataJson.encodeToString(meta)))
-        cached=d.copy(schemaVersion=3,appVersion="1.2.0",meta=meta)
+        cached=d.copy(schemaVersion=3,appVersion="1.2.1",meta=meta)
     }
     private suspend fun mutate(block: (Dataset)->Dataset) = lock.withLock {
         transaction { val old=read(); val next=block(old); Validation.dataset(next); if(next!=old) persist(next,old) }
@@ -266,7 +266,7 @@ class Repository(private val context: Context, val db: FoodLogDatabase) {
 
     private fun upgraded(d: Dataset): Dataset {
         Validation.dataset(d)
-        return d.copy(schemaVersion=3,appVersion="1.2.0")
+        return d.copy(schemaVersion=3,appVersion="1.2.1")
     }
     fun parse(text: String): Dataset {
         require(text.length.toLong()<=MAX_BACKUP_BYTES) { "备份解压后不能超过256MiB" }
@@ -320,7 +320,7 @@ class Repository(private val context: Context, val db: FoodLogDatabase) {
         val recovery = recoveryBackup()
         transaction {
             dao.clearFoods();dao.clearVersions();dao.clearMeals();dao.clearDays();dao.clearBodies();dao.clearPlans();dao.clearTargets();dao.clearOrigins();dao.clearTemplates()
-            persist(d.copy(schemaVersion=3,appVersion="1.2.0"))
+            persist(d.copy(schemaVersion=3,appVersion="1.2.1"))
         }
         recovery
     }

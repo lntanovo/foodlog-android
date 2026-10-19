@@ -12,12 +12,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.foodlog.app.domain.*
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -26,13 +28,14 @@ import kotlin.math.max
     var dialog by rememberSaveable { mutableStateOf(false) }
     var editingDate by rememberSaveable { mutableStateOf(date) }
     val end = LocalDate.parse(date)
+    val today = LocalDate.now(ZoneId.of(data.meta.timezone)).toString()
     val count = range.removeSuffix("天").toInt()
     val days = (0 until count).map { end.minusDays(it.toLong()) }
     val stats = Trends.window(data.bodies, end)
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(
-            Modifier.widthIn(max = 720.dp).fillMaxWidth(),
+            Modifier.widthIn(max = 720.dp).fillMaxWidth().testTag("trend-list"),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -41,9 +44,15 @@ import kotlin.math.max
                 Text("留意长期变化，也容纳每天的波动。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    DateButton(date, vm::date, Modifier.heightIn(min = 48.dp))
-                    FilledTonalButton(onClick = { editingDate = date; dialog = true }, modifier = Modifier.heightIn(min = 48.dp)) { Text("记录 / 编辑") }
+                Column {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("截至", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            DateButton(date, vm::date, Modifier.heightIn(min = 48.dp))
+                        }
+                        FilledTonalButton(onClick = { editingDate = date; dialog = true }, modifier = Modifier.heightIn(min = 48.dp)) { Text("记录 / 编辑") }
+                    }
+                    if (date != today) TextButton(onClick = vm::today, modifier = Modifier.align(Alignment.End).heightIn(min = 48.dp).testTag("trend-today")) { Text("回到今天") }
                 }
             }
             item {
@@ -81,7 +90,7 @@ import kotlin.math.max
                 val body = data.bodies.find { it.date == d.toString() }
                 val day = data.days.find { it.date == d.toString() }
                 val mean = Trends.window(data.bodies, d)
-                OutlinedCard(onClick = { editingDate = d.toString(); vm.date(editingDate); dialog = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp)) {
+                OutlinedCard(onClick = { editingDate = d.toString(); dialog = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp).testTag("trend-day-$d")) {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text(d.toString(), style = MaterialTheme.typography.titleSmall)
@@ -105,6 +114,10 @@ import kotlin.math.max
     val windows = ordered.map { Trends.window(data.bodies, it) }
     val means = windows.map { it.mean?.toDoubleOrNull() }
     val values = (weights + means).filterNotNull().filter { it.isFinite() }
+    val count = weights.count { it != null && it.isFinite() }
+    val nonstandard = data.bodies.count { !it.standard && it.weight != null && LocalDate.parse(it.date) in ordered.first()..ordered.last() }
+    Text("${ordered.first()} 至 ${ordered.last()} · ${count}次标准晨重", modifier = Modifier.testTag("trend-range-summary"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (nonstandard > 0) Text("另有${nonstandard}次非标准称重，仅在下方日期记录中展示，不计入晨重曲线与均值。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     if (values.isEmpty()) {
         Text("还没有标准晨重，记录后在这里查看。", modifier = Modifier.padding(vertical = 24.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
@@ -121,7 +134,7 @@ import kotlin.math.max
             Text("kg", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(display(low.toString()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Canvas(Modifier.weight(1f).height(180.dp).semantics { contentDescription = "${ordered.first()}至${ordered.last()}体重趋势。实线为完整7日均值，虚线为不足7天的暂均值；每天的具体数值见下方日期记录。" }) {
+        Canvas(Modifier.weight(1f).height(180.dp).testTag("weight-chart").semantics { contentDescription = "${ordered.first()}至${ordered.last()}体重趋势，${count}次标准晨重。实线为完整7日均值，虚线为不足7天的暂均值；每天的具体数值见下方日期记录。" }) {
             val inset = 4.dp.toPx()
             (0..3).forEach { val y = inset + (size.height - inset * 2) * it / 3; drawLine(grid, Offset(inset, y), Offset(size.width - inset, y), 1.dp.toPx()) }
             fun point(i: Int, v: Double) = Offset(inset + (size.width - inset * 2) * i / (ordered.size - 1), inset + (size.height - inset * 2) * (1 - (v - low) / (high - low)).toFloat())

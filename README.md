@@ -7,7 +7,7 @@
 
 ## 中文
 
-食记使用 Kotlin、Jetpack Compose 和 Room 构建，支持 **Android 8.0 及以上**。无需账号、网络或 API 密钥，记录保存在设备上。当前版本 **1.2.0**。
+食记使用 Kotlin、Jetpack Compose 和 Room 构建，支持 **Android 8.0 及以上**。无需账号、网络或 API 密钥，记录保存在设备上。当前版本 **1.2.1**。
 
 ### 能做什么
 
@@ -15,7 +15,7 @@
 - **三类饮食日**：每天选择训练日、休息日或放纵日。按参考体重和自己填写的系数（g/kg）生成各类参考值，也支持直接填写克数；放纵日可只标记、不设参考值。
 - **方便记餐**：保存常用餐、复制昨天的已吃餐食，先生成可修改的草稿，确认“保存已吃”后才计入摄入。支持份量单位等量换算。
 - **自己的食品库**：搜索、收藏和自定义食品。标签更新创建新版本，历史餐食保留当时的营养快照；未知营养与真实零值分别记录。
-- **身体与趋势**：记录晨重、腰围、实际训练及备注，查看 7 / 30 / 90 天趋势。
+- **身体与趋势**：记录晨重、腰围、实际训练及备注，查看 7 / 30 / 90 天趋势。补记或修改历史体重不会改变图表截止日期；顶部显示“截至”日期并可“回到今天”。曲线注明标准晨重点数，非标准称重仅保留在日期记录中，并有排除提示。
 - **本地备份**：通过系统文件选择器导出 `.foodlog.gz` 完整备份、预览恢复或分享食品库；兼容旧版 JSON 导入。支持深浅色外观。
 
 <p>
@@ -29,11 +29,12 @@
 
 | 版本 | 主要内容 | APK |
 | --- | --- | --- |
-| **[1.2.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.2.0)** | 三日型配额、首页摄入／参考、界面整理 | **[下载最新版](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.0/foodlog-1.2.0-debug.apk)** |
+| **[1.2.1](https://github.com/lntanovo/foodlog-android/releases/tag/v1.2.1)** | 修复补记历史体重导致趋势截止日期改变，明确曲线范围与点数 | **[下载最新版](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.1/foodlog-1.2.1-debug.apk)** |
+| [1.2.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.2.0) | 三日型配额、首页摄入／参考、界面整理 | [下载 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.0/foodlog-1.2.0-debug.apk) |
 | [1.1.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.1.0) | 可靠性修复、常用餐、复制昨天、压缩备份 | [下载 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.1.0/foodlog-1.1.0-debug.apk) |
 | [1.0.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.0.0) | 首个离线记录版本 | [下载 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.0.0/foodlog-1.0.0-debug.apk) |
 
-将 APK 下载到安卓手机，打开后按系统提示允许该安装来源。这些文件是**测试签名包**；本仓库发布的上述三个版本沿用同一签名，可覆盖安装并保留记录。更新前可先在“设置”导出完整备份。自行构建的 APK 若签名不同，无法直接覆盖已安装版本。
+将 APK 下载到安卓手机，打开后按系统提示允许该安装来源。这些文件是**测试签名包**；本仓库发布的上述四个版本沿用同一签名，可覆盖安装并保留记录。更新前可先在“设置”导出完整备份。自行构建的 APK 若签名不同，无法直接覆盖已安装版本。
 
 首次安装只有 **11 种公共食品**，没有个人体重、餐食、配额或常用餐。下载同一 APK 不会共享彼此的数据。
 
@@ -65,7 +66,9 @@ python tools/test_migrate.py
 
 macOS / Linux 使用 `./gradlew`。APK 生成在 `app/build/outputs/apk/debug/app-debug.apk`。
 
-1.2.0 已在 Windows / Android 15 模拟器完成 **65 项单元与数据库测试、19 项界面测试、4 项 Python 迁移测试**，并验证同签名覆盖升级保留记录。实体手机和不同厂商系统尚未逐一验证。公开仓库不含个人迁移文件；依赖该文件的个人数据集成用例缺失时会跳过。详情见[验收记录](docs/testing.md)、[数据格式](docs/data-format.md)和[安装与签名](docs/release.md)。
+1.2.1 已通过 **65 项单元与数据库测试、3 组针对趋势的界面回归**，Lint 与构建成功；并用合成数据验证从 1.2.0（versionCode 4）覆盖升级到 1.2.1（versionCode 5）后，4 条身体记录及其他全部业务表数据保留。本次界面回归针对趋势修复，未重新运行原有全部 19 项界面测试。
+
+历史版本 1.2.0 已在 Windows / Android 15 模拟器完成 **65 项单元与数据库测试、19 项界面测试、4 项 Python 迁移测试**，并验证同签名覆盖升级保留记录。实体手机和不同厂商系统尚未逐一验证。公开仓库不含个人迁移文件；依赖该文件的个人数据集成用例缺失时会跳过。详情见[验收记录](docs/testing.md)、[数据格式](docs/data-format.md)和[安装与签名](docs/release.md)。
 
 ### 隐私与项目状态
 
@@ -75,7 +78,7 @@ macOS / Linux 使用 `./gradlew`。APK 生成在 `app/build/outputs/apk/debug/ap
 
 ## English
 
-FoodLog is a **native, offline food diary for Android 8.0+**, built with Kotlin, Jetpack Compose and Room. It needs no account, internet connection or API key. Your records stay on your device. Current version: **1.2.0**.
+FoodLog is a **native, offline food diary for Android 8.0+**, built with Kotlin, Jetpack Compose and Room. It needs no account, internet connection or API key. Your records stay on your device. Current version: **1.2.1**.
 
 ### Features
 
@@ -83,18 +86,19 @@ FoodLog is a **native, offline food diary for Android 8.0+**, built with Kotlin,
 - **Three day types**: choose a training, rest or indulgence day. Set your own macro factors in g/kg of reference weight, or enter daily grams directly. An indulgence day can be a label without a quota.
 - **Faster meal entry**: save reusable meals or copy yesterday's posted meals into editable drafts. Only “Save as eaten” adds them to intake. Convert serving units while preserving equivalent quantities.
 - **Your food library**: search, favorite and create foods. Updated labels create new versions; past meals retain their original nutrition snapshots. Unknown values remain distinct from zero.
-- **Body records and trends**: log morning weight, waist, actual training and notes; view 7 / 30 / 90 day trends.
+- **Body records and trends**: log morning weight, waist, actual training and notes; view 7 / 30 / 90 day trends. Editing or adding a historical weigh-in preserves the chart end date. The header shows that date and offers a return to today. The chart states its standard morning-weight sample count; nonstandard weigh-ins stay in the date records with an explicit exclusion note.
 - **Local backup**: export compressed `.foodlog.gz` backups, preview restores and share selected food definitions through the system file picker. Legacy JSON imports and light/dark themes are supported.
 
 The screenshots above use a **synthetic 65 kg test plan**. These personal values and macro factors are not bundled with the app. FoodLog does not prescribe the ratios shown in the reference video.
 
 ### Download and install
 
-- **[Download 1.2.0 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.0/foodlog-1.2.0-debug.apk)** — day-type quotas, intake/reference display and a simpler interface.
+- **[Download 1.2.1 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.1/foodlog-1.2.1-debug.apk)** — fix historical weigh-ins changing the trend end date; clarify the displayed range and sample count.
+- [Download 1.2.0 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.0/foodlog-1.2.0-debug.apk) — day-type quotas, intake/reference display and a simpler interface.
 - [Download 1.1.0 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.1.0/foodlog-1.1.0-debug.apk) — reliability fixes, reusable meals, copy yesterday and compressed backups.
 - [Download 1.0.0 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.0.0/foodlog-1.0.0-debug.apk) — initial offline diary.
 
-Open the downloaded APK on your Android phone and follow its installation prompts. These are **debug-signed test builds**. The three APKs published here use the same signing identity, allowing an in-place update that preserves records. Export a full backup before updating if needed. A locally rebuilt APK signed with a different key cannot replace an installed published build directly.
+Open the downloaded APK on your Android phone and follow its installation prompts. These are **debug-signed test builds**. The four APKs published here use the same signing identity, allowing an in-place update that preserves records. Export a full backup before updating if needed. A locally rebuilt APK signed with a different key cannot replace an installed published build directly.
 
 A fresh install contains **11 public food definitions**, with no personal meals, body records, quotas or templates. Sharing the APK does not share your data.
 
@@ -128,7 +132,9 @@ python tools/test_migrate.py
 
 On Windows use `.\gradlew.bat`. The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
-Version 1.2.0 passed **65 unit/database tests, 19 emulator UI tests and 4 Python migration tests** on Windows with an Android 15 emulator. Same-signature upgrades were checked for data preservation. Physical phones and vendor-specific systems have not been exhaustively tested. Personal migration files are excluded from this repository; integration cases requiring those private fixtures skip when the files are absent. See the Chinese-language [test record](docs/testing.md), [data format](docs/data-format.md) and [installation/signing notes](docs/release.md).
+Version 1.2.1 passed **65 unit/database tests and 3 targeted trend UI regression groups**, with successful Lint and build checks. A same-signature upgrade from 1.2.0 (versionCode 4) to 1.2.1 (versionCode 5) preserved all 4 synthetic body records and all other business-table rows. These UI checks targeted the trend fix; the full previous suite of 19 UI tests was not rerun.
+
+Historical version 1.2.0 passed **65 unit/database tests, 19 emulator UI tests and 4 Python migration tests** on Windows with an Android 15 emulator. Same-signature upgrades were checked for data preservation. Physical phones and vendor-specific systems have not been exhaustively tested. Personal migration files are excluded from this repository; integration cases requiring those private fixtures skip when the files are absent. See the Chinese-language [test record](docs/testing.md), [data format](docs/data-format.md) and [installation/signing notes](docs/release.md).
 
 ### Privacy and project status
 

@@ -73,7 +73,7 @@ data class DeletedMealBundle(val meal: Meal, val drafts: List<Meal> = emptyList(
     val revision: Long = 0, val lastExport: String? = null
 )
 @Serializable data class Dataset(
-    val schemaVersion: Int = 3, val appVersion: String = "1.2.0", val kind: String = "FULL_BACKUP",
+    val schemaVersion: Int = 3, val appVersion: String = "1.2.1", val kind: String = "FULL_BACKUP",
     val exportedAt: String = now(), val meta: Meta = Meta(), val foods: List<Food> = emptyList(),
     val versions: List<FoodVersion> = emptyList(), val meals: List<Meal> = emptyList(),
     val days: List<DayLog> = emptyList(), val bodies: List<BodyRecord> = emptyList(),

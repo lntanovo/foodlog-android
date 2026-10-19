@@ -1,4 +1,17 @@
-# 验收记录
+# 1.2.1 验收记录
+
+修复趋势页编辑历史体重时意外更改图表截止日期的问题。执行日期：2026-10-19（Asia/Shanghai）；versionCode 5，Room v2 与备份格式 v3 保持兼容。
+
+- `assembleDebug`、`testDebugUnitTest`、`lintDebug` 成功；65项单元/数据库测试通过，0失败/跳过。
+- Android15独立测试模拟器定向验证3组趋势流程：四天标准晨重在编辑最早一天、保存、取消和Activity重建后仍完整显示；主动筛选截止日期后“回到今天”恢复4点；非标准称重保留原记录、显示排除说明且不进入曲线，全部为非标准时显示空态。
+- 1.2.0（code4）→1.2.1（code5）同签名覆盖安装成功。强制停止/重启及升级前后逐表比较，4条合成身体记录、餐食草稿、食品、日期、计划和目标数据全部一致；Room版本仍为2。
+- 本次未更改数据库结构或体重统计规则；不补造缺测体重，图表依旧只包含标准晨重。实体手机未逐一验证。
+
+Version 1.2.1 passed 65 unit/database tests, Lint/build checks and three targeted emulator trend flows. Editing an earlier record preserves the chart cutoff through save, cancel and recreation. Explicit filtering, returning to today and excluding nonstandard readings were checked. A same-signature upgrade from 1.2.0 preserved all synthetic business rows, including four body records. Room remains v2 and the backup format remains v3.
+
+已检查[连续四天合成晨重的曲线截图](screenshots/1.2.1/trend-four-days-light.png)，四个称重点与连线均可见；截图数值仅为测试示例，不是用户记录或内置数据。
+
+# 1.2.0 历史验收记录
 
 执行日期：2026-10-19（Asia/Shanghai）。交付版本1.2.0 / versionCode4。Windows、Temurin17.0.20.1+1、SDK35、Gradle Wrapper8.11.1。模拟设备独立FoodLogQuotaTest（Pixel6 / Android15 API35 x86_64），WHPX加速，Wi-Fi与移动数据均关闭。以下均使用隔离的模拟器测试数据，未在用户实体手机上执行。
 

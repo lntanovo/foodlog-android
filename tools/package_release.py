@@ -1,5 +1,5 @@
 """Package public source and APK separately from the personal import JSON."""
-import fnmatch, hashlib, pathlib, shutil, zipfile
+import fnmatch, hashlib, pathlib, re, shutil, zipfile
 
 root=pathlib.Path(__file__).resolve().parents[1]
 EXCLUDED_DIRS={'.git','.kotlin','.idea','build','.gradle','deliverables','__pycache__','logs'}
@@ -29,10 +29,11 @@ def source_files(base_dir=root):
 
 
 def main():
+    version=re.search(r'versionName\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"', (root/'app/build.gradle.kts').read_text(encoding='utf-8')).group(1)
     out=root/'deliverables';out.mkdir(exist_ok=True)
-    apk=out/'食记-1.2.0-debug.apk'
+    apk=out/f'食记-{version}-debug.apk'
     shutil.copyfile(root/'app/build/outputs/apk/debug/app-debug.apk',apk)
-    source=out/'食记-1.2.0-Android源码.zip'
+    source=out/f'食记-{version}-Android源码.zip'
     with zipfile.ZipFile(source,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
         for f in source_files():
             z.write(f,'android-app/'+f.relative_to(root).as_posix())
