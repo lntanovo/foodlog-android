@@ -86,6 +86,32 @@ class CloudBackupClientTest {
         throw AssertionError("Expected CloudException")
     }
 
+    @Test fun automaticUploadUsesAtomicCompareAndAppendWithoutClientOwnedIdentityFields() = runBlocking {
+        val baseId = "477f5b62-5e24-46d6-b4e7-ddd79721613c"
+        val transport = JsonTransport { request ->
+            assertEquals("/v1/rdb/rest/rpc/foodlog_commit_backup", request.path)
+            val body = request.body!!.jsonObject
+            assertEquals(baseId, body.getValue("expected_head").jsonPrimitive.content)
+            val payload = body.getValue("payload").jsonObject
+            assertFalse(payload.containsKey("owner_id")); assertFalse(payload.containsKey("created_at"))
+            buildJsonObject { put("status", "saved"); put("record", json.encodeToJsonElement(saved())) }
+        }
+        val client = CloudBackupClient(Credentials(identity), config, transport) { Connection(it) }
+        assertEquals(saved(), client.uploadAutomatic(identity, record(), source(), baseId))
+        assertEquals(1, transport.requests.size)
+    }
+
+    @Test fun automaticConflictReturnsNoSuccessAndDoesNotUseTheUnconditionalInsertPath() = runBlocking {
+        val transport = JsonTransport { request ->
+            assertEquals("/v1/rdb/rest/rpc/foodlog_commit_backup", request.path)
+            assertEquals(JsonNull, request.body!!.jsonObject["expected_head"])
+            buildJsonObject { put("status", "conflict"); put("head", "477f5b62-5e24-46d6-b4e7-ddd79721613c") }
+        }
+        val client = CloudBackupClient(Credentials(identity), config, transport) { Connection(it) }
+        assertNull(client.uploadAutomatic(identity, record(), source(), null))
+        assertEquals(1, transport.requests.size)
+    }
+
     @Test fun uploadUsesImmutableBinaryPostAndServerOwnedMetadataThenListsStablePages() = runBlocking {
         val auth = Credentials(identity)
         val transport = JsonTransport { request ->

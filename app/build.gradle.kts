@@ -12,8 +12,8 @@ android {
         applicationId = "com.foodlog.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.3.0"
+        versionCode = 7
+        versionName = "1.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -52,6 +52,7 @@ dependencies {
     ksp(libs.room.compiler)
     implementation(libs.serialization)
     implementation(libs.datastore)
+    implementation(libs.work.runtime)
     debugImplementation(libs.compose.tooling)
     debugImplementation(libs.compose.test.manifest)
     testImplementation(libs.junit)

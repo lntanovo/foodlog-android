@@ -28,7 +28,10 @@ fun CloudBackupSection(
     transfer: TransferViewModel = viewModel(),
 ) {
     val identity by cloud.identity.collectAsState()
-    val busy by cloud.busy.collectAsState()
+    val manualBusy by cloud.busy.collectAsState()
+    val automatic by cloud.automaticStatus.collectAsState()
+    val autoBusy = identity != null && automatic.phase in setOf("CHECKING", "UPLOADING", "RESTORING")
+    val busy = manualBusy || autoBusy
     val error by cloud.error.collectAsState()
     val message by cloud.message.collectAsState()
     val task by cloud.task.collectAsState()
@@ -42,13 +45,14 @@ fun CloudBackupSection(
     val editor by vm.editor.collectAsState()
     val ownedRecords = records.filter { it.ownerId == identity?.uid }
     var loginDialog by rememberSaveable { mutableStateOf(false) }
+    var keepLocalDialog by remember { mutableStateOf(false) }
     val localActive = localTask != null || localBusy || editor != null
     LaunchedEffect(localActive) { cloud.setLocalTransferActive(localActive) }
     LaunchedEffect(identity) { if (identity != null) loginDialog = false }
 
-    Section("账号与云备份", "登录同一账号，可在另一台设备选择备份恢复。离线也能照常记录。") {
+    Section("账号与云备份", "记录后自动备份，断网后自动重试。新设备登录同一账号会自动取回记录。") {
         if (identity == null) {
-            Text("本机已有记录会继续保留。登录不会自动替换记录。", style = MaterialTheme.typography.bodySmall)
+            Text("已有本机记录会先核对，发现差异后由你选择。", style = MaterialTheme.typography.bodySmall)
             Button(onClick = { loginDialog = true }, enabled = !busy,
                 modifier = Modifier.fillMaxWidth().testTag("cloudLogin")) { Text("用户名与密码登录") }
         } else {
@@ -58,8 +62,20 @@ fun CloudBackupSection(
                 TextButton(onClick = cloud::logout, enabled = !busy, modifier = Modifier.testTag("cloudLogout")) { Text("退出") }
             }
             Text("本机：${compactCounts(cloudSummary(data))}", style = MaterialTheme.typography.bodySmall)
-            Button(onClick = cloud::backup, enabled = !busy && task == null && !localActive,
-                modifier = Modifier.fillMaxWidth().testTag("cloudBackup")) { Text("备份本机记录到此账号") }
+            Text(automatic.detail, color = if (automatic.phase == "CONFLICT") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.testTag("automaticCloudStatus"), style = MaterialTheme.typography.bodyMedium)
+            automatic.lastBackupAt?.let { Text("最近云端备份：${backupTime(it, data.meta.timezone)}", style = MaterialTheme.typography.bodySmall) }
+            if (autoBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            if (automatic.phase == "CONFLICT") {
+                automatic.remote?.let { record ->
+                    Text("云端：${compactCounts(CloudDatasetSummary(record.recordCounts, record.firstDate, record.lastDate))}", style = MaterialTheme.typography.bodySmall)
+                    Button(onClick = { cloud.preview(record) }, enabled = !busy && task == null && !localActive,
+                        modifier = Modifier.fillMaxWidth().testTag("autoUseCloud")) { Text("核对并使用云端记录…") }
+                }
+                OutlinedButton(onClick = { keepLocalDialog = true }, enabled = !busy && task == null && !localActive,
+                    modifier = Modifier.fillMaxWidth().testTag("autoKeepLocal")) { Text("保留本机并备份…") }
+            } else Button(onClick = cloud::backupNow, enabled = !busy && task == null && !localActive,
+                modifier = Modifier.fillMaxWidth().testTag("cloudBackup")) { Text("立即检查并备份") }
             OutlinedButton(onClick = cloud::showBackups, enabled = !busy && task == null && !localActive,
                 modifier = Modifier.fillMaxWidth().testTag("cloudList")) { Text("查看云端备份") }
             Text("每次备份都会保留一个独立版本；恢复需要你确认。", style = MaterialTheme.typography.bodySmall,
@@ -115,7 +131,7 @@ fun CloudBackupSection(
             title = { Text("登录云备份账号") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("登录只用于保存和取回云备份，本机记录不会因此改变。", style = MaterialTheme.typography.bodySmall)
+                    Text("登录后开启自动备份。空白设备会自动恢复云端记录；已有记录时先核对差异。", style = MaterialTheme.typography.bodySmall)
                     OutlinedTextField(username, { username = it.take(128) }, label = { Text("用户名") }, singleLine = true,
                         enabled = !busy, modifier = Modifier.fillMaxWidth().testTag("cloudUsername"))
                     OutlinedTextField(password, { password = it.take(512) }, label = { Text("密码") }, singleLine = true,
@@ -134,6 +150,18 @@ fun CloudBackupSection(
             }, dismissButton = {
                 TextButton(enabled = !busy, onClick = { password = ""; loginDialog = false }) { Text("取消") }
             })
+    }
+
+    if (keepLocalDialog && identity != null && automatic.phase == "CONFLICT") {
+        AlertDialog(onDismissRequest = { keepLocalDialog = false }, title = { Text("使用这台设备的记录？") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("本机：${compactCounts(cloudSummary(data))}")
+                automatic.remote?.let { Text("云端：${compactCounts(CloudDatasetSummary(it.recordCounts, it.firstDate, it.lastDate))}") }
+                Text("本机记录将成为账号的最新备份。旧云端备份仍保留；两边的记录不会合并。")
+            } },
+            confirmButton = { TextButton(onClick = { keepLocalDialog = false; cloud.keepLocal() },
+                modifier = Modifier.testTag("autoKeepLocalConfirm")) { Text("保留本机并自动备份") } },
+            dismissButton = { TextButton(onClick = { keepLocalDialog = false }) { Text("取消") } })
     }
 
     preview?.takeIf { it.identity == identity }?.let { shown ->

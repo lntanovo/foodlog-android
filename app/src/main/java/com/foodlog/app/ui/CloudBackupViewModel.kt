@@ -12,6 +12,9 @@ import com.foodlog.app.cloud.CloudBackupRecord
 import com.foodlog.app.cloud.CloudIdentity
 import com.foodlog.app.domain.Dataset
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class CloudBackupViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as FoodLogApplication
@@ -48,6 +51,15 @@ class CloudBackupViewModel(application: Application) : AndroidViewModel(applicat
     val preview = engine.preview
     val task = engine.task
     val blockLocalTransfer = engine.blockLocalTransfer
+    val automaticStatus = app.automaticBackup.status
+    fun backupNow() = app.automaticBackup.kick()
+    fun keepLocal() = viewModelScope.launch {
+        try {
+            val accepted = withContext(Dispatchers.IO) { app.automaticBackup.keepLocal() }
+            if (!accepted) engine.error.value = "云端记录刚刚有变化，请重新核对后选择。"
+        } catch (error: kotlinx.coroutines.CancellationException) { throw error }
+        catch (_: Exception) { engine.error.value = "暂时无法核对云端记录，请联网后重试。本机记录未改动。" }
+    }
 
     fun setLocalTransferActive(active: Boolean) = engine.setLocalTransferActive(active)
     fun login(username: String, password: String) = engine.login(username, password)

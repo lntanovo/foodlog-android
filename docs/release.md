@@ -1,10 +1,12 @@
 # 安装、更新与签名
 
-公开仓库：[lntanovo/foodlog-android](https://github.com/lntanovo/foodlog-android)。当前交付 **debug APK**：[foodlog-1.3.0-debug.apk](https://github.com/lntanovo/foodlog-android/releases/download/v1.3.0/foodlog-1.3.0-debug.apk)，applicationId `com.foodlog.app`，versionCode **6**，versionName **1.3.0**，minSdk26。各版本安装包与校验文件见 [GitHub Releases](https://github.com/lntanovo/foodlog-android/releases)。
+公开仓库：[lntanovo/foodlog-android](https://github.com/lntanovo/foodlog-android)。当前交付 **debug APK**：[foodlog-1.4.0-debug.apk](https://github.com/lntanovo/foodlog-android/releases/download/v1.4.0/foodlog-1.4.0-debug.apk)，applicationId `com.foodlog.app`，versionCode **7**，versionName **1.4.0**，minSdk26。各版本安装包与校验文件见 [GitHub Releases](https://github.com/lntanovo/foodlog-android/releases)。
 
-1.3.0 延续 1.0.0 至 1.2.1 的同一签名。请直接覆盖安装，不要先卸载或清除应用数据。Room 仍为 v2，完整备份仍为 schema v3。已验证 1.2.1 → 1.3.0 同签名覆盖安装和重启后业务内容保留，详见[验收记录](testing.md)。
+1.4.0 延续 1.0.0 至 1.3.0 的同一签名。请直接覆盖安装，不要先卸载或清除应用数据。Room 仍为 v2，完整备份仍为 schema v3。已用合成数据验证 1.3.0 → 1.4.0 覆盖升级与重启后逐表内容保留，详见[验收记录](testing.md)。
 
-新增可选用户名密码云备份；网络权限仅用于 CloudBase 登录及备份操作，日常本机记账仍可离线完成。账号不影响本机数据库生命周期，登录与退出不会清除或自动恢复数据。换设备需在旧设备手动备份，再在新设备预览确认恢复；未实现自动更新或双向合并。云服务可能到期，务必另存独立完整备份，详见[账号与云备份](cloud-backup.md)。
+1.4.0 登录后自动备份记录变更，新设备空白安装后登录同一账号自动恢复；两边都有不同记录时先核对。首次从 1.3 升级若提示差异，可选择“保留本机并备份…”把本机记录作为新版本保存，此后自动处理。日常本机记账仍可离线完成，退出账号不清除本机记录。换机前查看最近成功备份时间。未实现自动应用更新或冲突自动合并；云服务可能到期，务必另存独立完整备份，详见[账号与云备份](cloud-backup.md)。
+
+**English:** Install 1.4.0 over the existing app without uninstalling or clearing data. The package, signing certificate, Room v2 and backup schema v3 remain stable. Signed-in edits back up automatically; a pristine new device restores after login. Existing divergent records require review. An upgrade from 1.3 may need one initial keep-local/cloud choice. Check successful cloud confirmation before switching devices and keep an independent local export.
 
 1.2.1沿用本机1.0.0（versionCode 2）、1.1.0（versionCode 3）、1.2.0（versionCode 4）的debug签名，可直接覆盖升级；无需卸载旧版。Room结构仍为v2，新增业务字段保存在原JSON列；v1数据库仍通过显式 `MIGRATION_1_2` 升到v2，只新增常用餐表，保留食品、历史版本、餐食、草稿、身体记录、目标与来源记录。备份格式保持schemaVersion 3，v1/v2 JSON或GZIP备份及个人迁移文件继续支持。v3备份应通过新版应用恢复。
 

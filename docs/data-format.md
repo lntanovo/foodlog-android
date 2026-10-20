@@ -53,3 +53,13 @@
 
 The local business format remains schemaVersion 3. Accounts and tokens never enter Dataset. Cloud metadata stores server-assigned ownership/time, immutable IDs, SHA-256, size, versions and summaries. Local revision checks integrity and stale previews; it does not order cross-device changes. An empty cloud list never becomes an empty restore. See [cloud backup](cloud-backup.md).
 
+## 1.4.0 自动备份 / Automatic backups
+
+业务格式仍为 v3，Room 仍为 v2。自动队列独立保存账号关联、已知云版本、业务内容指纹、待传快照编号与恢复意图，不混入可分享的食品库或业务备份。内容指纹忽略导出时间、应用版本、本机修订号、lastExport 和实体数组顺序；实际字段、删除、草稿和条目顺序仍有意义。
+
+WorkManager 输入仅含 UID 与登录代次；持久化日志及快照在应用私有文件目录，凭证继续只存于 Keystore 加密的独立区域。进程重建后比较实际本机内容及旧修订号，不能把恢复意图当作无条件再次替换授权。自动恢复同样经过 SHA-256、大小、摘要、身份检查和 Repository.restore 的保护副本与锁内校验。
+
+`foodlog_commit_backup(payload, expected_head)` 使用服务端身份与已有 RLS，在事务锁内检查云端最新 UUID 后新增不可变清单；相同 UUID 重试返回原记录，客户端继续核对全部元信息。插入触发器序列化同一账号的清单写入，并分配单调递增的服务端时间。旧版本和手动上传仍兼容；没有云端 UPDATE/DELETE 用户权限。
+
+The business format remains v3 and Room remains v2. Automatic journals are separate from portable business/library backups and contain no tokens or passwords. Canonical fingerprints exclude transport counters/times and collection order while preserving real edits, deletions and drafts. WorkManager inputs contain only UID and login generation. Automatic restores use the same verified recovery copies and locked account/revision checks. The invoker-rights compare-and-append RPC serializes immutable manifest publication; stale cloud heads require review and retries verify the original snapshot.
+

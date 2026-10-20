@@ -7,7 +7,7 @@
 
 ## 中文
 
-食记使用 Kotlin、Jetpack Compose 和 Room 构建，支持 **Android 8.0 及以上**。日常记录保存在设备上，无需登录；可选用户名密码云备份用于换设备取回记录。当前版本 **1.3.0**。
+食记使用 Kotlin、Jetpack Compose 和 Room 构建，支持 **Android 8.0 及以上**。日常记录保存在设备上，无需登录；登录后可自动云备份、换设备取回记录。当前版本 **1.4.0**。
 
 ### 能做什么
 
@@ -17,12 +17,12 @@
 - **自己的食品库**：搜索、收藏和自定义食品。标签更新创建新版本，历史餐食保留当时的营养快照；未知营养与真实零值分别记录。
 - **身体与趋势**：记录晨重、腰围、实际训练及备注，查看 7 / 30 / 90 天趋势。补记或修改历史体重不会改变图表截止日期；顶部显示“截至”日期并可“回到今天”。曲线注明标准晨重点数，非标准称重仅保留在日期记录中，并有排除提示。
 - **本地备份**：通过系统文件选择器导出 `.foodlog.gz` 完整备份、预览恢复或分享食品库；兼容旧版 JSON 导入。支持深浅色外观。
-- **账号与云备份**：手动保存完整记录的独立版本；另一台设备登录同一账号，核对预览后确认恢复。断网、退出与云端为空不改变本机记录；不自动合并两台设备。
+- **自动云备份**：登录后记录变更自动排队上传，连续修改合并成快照，断网后自动重试。新设备空白安装后登录同一账号会自动恢复；已有记录出现差异时先核对，保留历史版本，不自动合并冲突。首页和设置可查看备份状态。
 
 <p>
   <img src="docs/screenshots/1.2.0/home-reference-light.png" width="280" alt="食记首页：日型与已记录／参考碳蛋脂">
   <img src="docs/screenshots/1.2.0/quota-reference-light.png" width="280" alt="配额页：三类日期的每日参考值">
-  <img src="docs/screenshots/1.3.0/settings-cloud-light.png" width="280" alt="设置：可选账号云备份与独立本地备份">
+  <img src="docs/screenshots/1.4.0/settings-cloud-light.png" width="280" alt="设置：自动云备份与独立本地备份">
 </p>
 
 截图使用 **65 kg 的合成测试计划**，用于演示界面；应用不内置这组个人数据或系数，也不会自动采用视频中的饮食配额。
@@ -31,7 +31,8 @@
 
 | 版本 | 主要内容 | APK |
 | --- | --- | --- |
-| **[1.3.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.3.0)** | 可选账号、私有版本云备份、跨设备预览恢复、本机保护副本 | **[下载最新版](https://github.com/lntanovo/foodlog-android/releases/download/v1.3.0/foodlog-1.3.0-debug.apk)** |
+| **[1.4.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.4.0)** | 自动云备份、联网重试、新设备自动恢复、差异保护 | **[下载最新版](https://github.com/lntanovo/foodlog-android/releases/download/v1.4.0/foodlog-1.4.0-debug.apk)** |
+| [1.3.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.3.0) | 可选账号、私有版本云备份、跨设备预览恢复、本机保护副本 | [APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.3.0/foodlog-1.3.0-debug.apk) |
 | [1.2.1](https://github.com/lntanovo/foodlog-android/releases/tag/v1.2.1) | 修复历史体重编辑截断趋势 | [下载 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.1/foodlog-1.2.1-debug.apk) |
 | [1.2.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.2.0) | 三日型配额、首页摄入／参考、界面整理 | [下载 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.0/foodlog-1.2.0-debug.apk) |
 | [1.1.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.1.0) | 可靠性修复、常用餐、复制昨天、压缩备份 | [下载 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.1.0/foodlog-1.1.0-debug.apk) |
@@ -48,7 +49,7 @@
 3. **选择今天的日型**：回到“今日”，选择日期及训练日／休息日／放纵日，首页显示该日的摄入与参考。饮食日型独立于实际运动记录；某类未设配额时不会借用其他日型的数值。
 4. **记录实际吃过的餐食**：选择食品、填写份量并保存已吃。可先从“食品”添加自己的营养标签；以后使用常用餐或复制昨天来生成草稿，再核对份量。草稿不计入摄入，份量留空表示待补。
 5. **定期备份**：设置 → 导出完整备份，保存到自己选择的位置。恢复时先核对预览；完整恢复会替换当前业务数据，提交前会自动生成恢复前备份。新版备份建议用新版应用恢复。
-6. **可选跨设备备份**：设置 → 账号与云备份，使用环境所有者预置的账号登录，在旧设备“备份本机记录到此账号”；新设备登录后查看版本并预览恢复。登录不自动上传或替换。云服务可能到期，请另存本地完整备份到电脑。详见[账号、到期与部署说明](docs/cloud-backup.md)。
+6. **自动跨设备备份**：设置 → 账号与云备份，使用已开通的账号登录。记录修改后自动备份，换机前查看“记录已自动备份到云端”。新设备登录相同账号自动恢复；本机已有不同记录时先核对再选择。断网、省电限制或强行停止应用可能延迟上传，重新联网并打开应用会继续检查。详见[账号、到期与部署说明](docs/cloud-backup.md)。
 
 ### 电脑上体验
 
@@ -70,7 +71,7 @@ python tools/test_migrate.py
 
 macOS / Linux 使用 `./gradlew`。APK 生成在 `app/build/outputs/apk/debug/app-debug.apk`。
 
-1.3.0 已通过 **108 项单元与数据库测试**，构建与 Lint 成功。云端权限、两设备恢复、界面与覆盖升级的具体范围见[验收记录](docs/testing.md)。
+1.4.0 已通过 **128 项单元与数据库测试**；离线重试、进程恢复、差异保护与旧版覆盖升级的具体范围见[验收记录](docs/testing.md)。
 
 历史版本 1.2.1 通过 65 项单元与数据库测试、3 组针对趋势的界面回归，验证从 1.2.0 覆盖升级保留记录。
 
@@ -84,7 +85,7 @@ macOS / Linux 使用 `./gradlew`。APK 生成在 `app/build/outputs/apk/debug/ap
 
 ## English
 
-FoodLog is a **native food diary for Android 8.0+**, built with Kotlin, Jetpack Compose and Room. Everyday records stay on your device and work without signing in. Optional username/password cloud backups let another device retrieve your records. Current version: **1.3.0**.
+FoodLog is a **native food diary for Android 8.0+**, built with Kotlin, Jetpack Compose and Room. Everyday records work offline; signing in enables automatic cloud backups and recovery on another device. Current version: **1.4.0**.
 
 ### Features
 
@@ -94,13 +95,13 @@ FoodLog is a **native food diary for Android 8.0+**, built with Kotlin, Jetpack 
 - **Your food library**: search, favorite and create foods. Updated labels create new versions; past meals retain their original nutrition snapshots. Unknown values remain distinct from zero.
 - **Body records and trends**: log morning weight, waist, actual training and notes; view 7 / 30 / 90 day trends. Editing or adding a historical weigh-in preserves the chart end date. The header shows that date and offers a return to today. The chart states its standard morning-weight sample count; nonstandard weigh-ins stay in the date records with an explicit exclusion note.
 - **Local backup**: export compressed `.foodlog.gz` backups, preview restores and share selected food definitions through the system file picker. Legacy JSON imports and light/dark themes are supported.
-- **Optional cloud backup**: manually save immutable complete versions. Another device signs in to the same account and reviews a version before confirming restore. Offline operation, logout and an empty cloud account leave local records intact. There is no automatic merge.
+- **Automatic cloud backup**: signed-in changes queue automatically, rapid edits share snapshots and interrupted uploads retry. A pristine device restores after signing in to the same account. Divergent existing records require a choice; historical snapshots remain available and conflicts are not merged automatically. Today and Settings show progress.
 
 The screenshots above use a **synthetic 65 kg test plan**. These personal values and macro factors are not bundled with the app. FoodLog does not prescribe the ratios shown in the reference video.
 
 ### Download and install
 
-- **[Download 1.3.0 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.3.0/foodlog-1.3.0-debug.apk)** — optional accounts, private versioned cloud backups and reviewed cross-device restore.
+- **[Download 1.4.0 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.4.0/foodlog-1.4.0-debug.apk)** — automatic backups, network retries, new-device recovery and conflict protection.
 - [Download 1.2.1 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.1/foodlog-1.2.1-debug.apk) — fix historical weigh-ins changing the trend end date; clarify the displayed range and sample count.
 - [Download 1.2.0 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.0/foodlog-1.2.0-debug.apk) — day-type quotas, intake/reference display and a simpler interface.
 - [Download 1.1.0 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.1.0/foodlog-1.1.0-debug.apk) — reliability fixes, reusable meals, copy yesterday and compressed backups.
@@ -117,7 +118,7 @@ A fresh install contains **11 public food definitions**, with no personal meals,
 3. **Choose the day's label**: on **Today**, select a date and its training/rest/indulgence label. Intake and reference appear together. The dietary label does not alter actual training records, and a day type without a quota does not inherit another type's values.
 4. **Log what you ate**: choose foods, enter quantities and save the meal as eaten. Add your own labels in **Foods**. Reusable meals and yesterday's meals create drafts for review; drafts do not count toward intake, and a blank quantity means it still needs filling in.
 5. **Keep a backup**: use **Settings → Export full backup** and choose where to save it. Review the preview before restoring; a full restore replaces current business data and first creates an automatic pre-restore backup. Restore newer backups with the newer app.
-6. **Optional cross-device backup**: sign in under account/cloud backup settings with a provisioned account. Back up the old device, then sign in on the new device, select a cloud version and review the preview before restoring. Signing in alone neither uploads nor replaces data. Keep a separate local file before cloud expiry. See [accounts, expiry and deployment](docs/cloud-backup.md#english).
+6. **Automatic cross-device backup**: sign in under account/cloud backup settings. Changes back up automatically; check the cloud confirmation before switching devices. A pristine device restores when signing in to the same account. Divergent existing records require review. Offline operation, battery restrictions and force-stop can delay work; reconnect and reopen to continue checking. See [accounts, expiry and deployment](docs/cloud-backup.md#english).
 
 The current application interface is in Chinese; the bold English tab names above describe the corresponding Chinese controls.
 
@@ -141,7 +142,7 @@ python tools/test_migrate.py
 
 On Windows use `.\gradlew.bat`. The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
-Version 1.3.0 passed **108 unit/database tests**, build and Lint checks. See the [test record](docs/testing.md) for the precise scope of live cloud isolation, two-device restore, UI and in-place upgrade checks.
+Version 1.4.0 passed **128 unit/database tests**. See the [test record](docs/testing.md) for automatic backup retry, interrupted-process recovery, conflict protection, live cloud and in-place upgrade checks.
 
 Historical version 1.2.1 passed 65 unit/database tests and 3 targeted trend UI groups, with a verified same-signature upgrade from 1.2.0.
 

@@ -2,9 +2,22 @@
 
 ## 中文
 
-食记 1.3.0 的日常记录仍保存在手机本地，无需登录。云备份是可选的手动功能：同一账号可在另一台设备取回一个完整版本，再核对并确认替换。它不会自动同步、合并或解决两台设备的编辑冲突。
+食记 1.4.0 日常记录仍先保存在手机本地，无需登录。登录后自动备份记录变更，新设备空白安装后登录同一账号会自动恢复。两台设备都有不同修改时先核对，不自动合并。
 
-### 使用
+### 1.4.0 自动备份与换机
+
+1. 设置 → 账号与云备份，输入已开通的用户名、密码。记录保存后，后台任务会自动上传餐食（含草稿）、体重、配额、食品和常用餐。短时间连续编辑可共用一个快照，已备份的相同内容不重复上传。
+2. 首页和设置显示等待、上传、完成及差异提示。换机前确认“记录已自动备份到云端”及最近备份时间；联网不等于上传已经完成。可点“立即检查并备份”重试。
+3. 断网时本机照常记录；任务保存在设备上，联网后由系统继续。电池限制、强行停止与设备厂商的后台策略可能延迟上传；重新打开应用会再次检查。应用运行时还会直接检查腾讯云连接，兼容系统联网探测失败但国内服务可达的网络。WorkManager 使用网络约束、重试与周期检查，不保证每次按键后立即完成传输。
+4. 新设备尚无个人记录时，登录后自动下载最新完整备份，校验并恢复。已关联设备若没有待上传修改，也可取回另一设备的新备份；两边都有修改时暂停并提示核对。
+5. 从 1.3 升级或首次登录已有记录的设备时，如果与云端不同，先选择“核对并使用云端记录…”或“保留本机并备份…”。后者会新增本机版本，历史云备份仍保留。切换账号不会自动把原账号的本机记录传给新账号。
+6. 恢复前创建并校验本机保护副本，锁内重新检查账号与本机修订号；下载期间新增的本机记录不会被直接覆盖。历史版本仍可手动预览恢复，完整恢复会替换当前本机记录。
+
+自动任务以私有日志保存已知云端版本和待传快照，不保存密码或令牌。上传文件后，`foodlog_commit_backup` 在同一数据库事务内比较已知云端版本并新增清单；过期设备不会无条件把旧分支变成最新版本。失败重试沿用同一编号和字节，不替换既有备份。旧版手动上传也由插入触发器串行化；建议使用中的设备均升级至 1.4。
+
+### 1.3.0 旧版本的手动流程
+
+以下仅描述 1.3.0 APK；1.4.0 请按上面的自动流程使用。
 
 1. 在“设置 → 账号与云备份”输入已开通的用户名和密码。账号由环境所有者在腾讯云 CloudBase 用户管理中预置；应用不提供自行注册或微信登录。
 2. 在保存着完整记录的设备点击“备份本机记录到此账号”，等待成功提示。每次生成独立版本，失败可以重试，之前的成功版本继续保留。
@@ -33,16 +46,29 @@
 
 本仓库默认环境只供所有者预置的账号使用。下载源码不会获得云端管理权限；自行使用云功能时，请创建自己的国内 CloudBase PG 环境，在用户管理中启用用户名密码并预置账号，然后：
 
-1. 检查现有 schema、权限与费用，再通过 CloudBase 版本迁移工具应用 `cloudbase/migrations/20261019051410_foodlog_cloud_backups.sql`。不要在共享环境中重复应用或修改其他应用的表。
+1. 检查现有 schema、权限与费用，再依次通过版本迁移工具应用 `cloudbase/migrations/20261019051410_foodlog_cloud_backups.sql` 和 `20261020070000_foodlog_automatic_backup.sql`；已应用的版本不重复执行。自动提交函数为 SECURITY INVOKER，仅 authenticated 可执行，继续受现有行级权限保护。不要修改其他应用的表。
 2. 在 `CloudConfig` 中设置自己的环境网关。该环境 ID 是客户端配置，不是管理密钥；不要向手机加入 API Key、SecretId 或 SecretKey。
 3. 用两个合成账号验证清单、私有文件和签名下载均不能越权；再做备份、预览、恢复和旧版覆盖升级测试。
 4. 新版保持自己的 applicationId 与签名，递增 versionCode。不要为迁移而清除应用数据。
 
 ## English
 
-FoodLog 1.3.0 keeps everyday records locally and works without signing in. Optional manual cloud backups let another device retrieve a complete version under the same account. A restore requires review and confirmation; there is no automatic synchronization or merge.
+FoodLog 1.4.0 keeps records locally first and works offline. Signing in enables automatic backups. A pristine device restores the latest verified snapshot after signing into the same account; divergent existing edits require a choice and are not merged automatically.
 
-### Use
+### 1.4.0 automatic workflow
+
+1. Sign in under account/cloud backup settings. Changes to meals/drafts, body records, quotas, foods and templates queue automatically. Rapid edits can share snapshots; unchanged business content does not create another backup.
+2. Today and Settings show progress and the last backup time. Before switching devices, wait for cloud confirmation. Use **Check and back up now** to retry. Being online does not prove an upload has completed.
+3. Offline records remain local. Persistent WorkManager tasks retry with connectivity and check periodically. Battery restrictions, vendor background policies and force-stop can delay work; reopening checks again. Uploads are not guaranteed to finish immediately after every keystroke.
+4. A pristine installation restores automatically after login. An associated device with no unsent changes may receive newer cloud records. Divergent changes pause processing for review.
+5. An existing installation upgrading from 1.3 may need one initial choice: review and use the cloud copy, or keep local records and create a new backup. Both histories remain available. Switching accounts does not silently upload another account's associated local data.
+6. A verified local recovery copy and in-lock account/revision checks protect each restore. Local edits made during download cannot be silently replaced. Historical snapshots remain available for explicit full replacement restore.
+
+Private journals retain the known cloud head and exact immutable pending payload, without credentials. The SECURITY INVOKER `foodlog_commit_backup` RPC atomically compares the expected cloud head and appends metadata, preventing stale automatic uploads from advancing it. Retries reuse the same UUID and bytes. Legacy/manual inserts are serialized by a trigger; upgrade active devices to 1.4.
+
+### 1.3.0 manual workflow (older APK)
+
+The following describes 1.3.0 only; use the automatic workflow above with 1.4.0.
 
 1. Open **Settings → Account and cloud backup** and sign in with a provisioned username/password. The environment owner creates accounts in CloudBase user management. Self-registration and WeChat login are not included.
 2. On the device holding your records, choose **Back up this device** and wait for confirmation. Each backup is a separate version; failed transfers can be retried without replacing earlier versions.

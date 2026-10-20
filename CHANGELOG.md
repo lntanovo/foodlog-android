@@ -4,6 +4,18 @@
 
 Every version has a Git tag, source snapshot and downloadable APK. These are development builds signed with the same local debug key.
 
+## [1.4.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.4.0)
+
+- 登录后自动备份餐食、体重、配额、食品与常用餐的修改；保留本机记录、离线队列和历史版本。
+- 新设备空白安装登录同一账号后自动恢复；本机与云端都有修改时先核对，避免自动覆盖。
+- 首页与设置显示状态；恢复前保护副本、账号/修订号校验、云端原子比较后新增、同一快照重试防重复。
+- versionCode 7；包名、签名、Room v2 和业务备份格式 v3 保持兼容。
+
+- Automatically back up signed-in changes to meals, body records, quotas, foods and templates; retain local records, offline work and historical snapshots.
+- Restore a pristine new device after signing into the same account; review divergent local/cloud edits before choosing a version.
+- Show progress in Today/Settings; protect restores with local recovery files and revision/account checks. Atomically compare cloud heads and retry immutable snapshots without duplicates.
+- Version code 7; stable package/signature, Room v2 and business backup schema v3.
+
 ## [1.3.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.3.0)
 
 - 新增可选用户名密码登录、私有不可变版本云备份和跨设备预览恢复；登录、退出与网络失败不影响本机记录。

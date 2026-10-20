@@ -15,13 +15,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.foodlog.app.domain.*
+import com.foodlog.app.FoodLogApplication
 import java.math.BigDecimal
 import java.time.LocalDate
 
 @Composable fun TodayScreen(vm: AppViewModel, data: Dataset, date: String) {
+    val app = LocalContext.current.applicationContext as FoodLogApplication
+    val automatic by app.automaticBackup.status.collectAsState()
+    val cloudIdentity by app.cloudSessions.identity.collectAsState()
     var bodyDialog by rememberSaveable(date) { mutableStateOf(false) }
     var secondary by rememberSaveable { mutableStateOf(false) }
     var templatesDialog by rememberSaveable(date) { mutableStateOf(false) }
@@ -55,6 +60,11 @@ import java.time.LocalDate
                 TextButton(onClick = { vm.today() }, modifier = Modifier.heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 6.dp)) {
                     Text("回到今天", style = MaterialTheme.typography.labelLarge)
                 }
+            }
+            if (cloudIdentity != null) TextButton(onClick = { vm.tab(4) },
+                modifier = Modifier.fillMaxWidth().testTag("todayCloudStatus"), contentPadding = PaddingValues(0.dp)) {
+                Text(automatic.detail, style = MaterialTheme.typography.labelMedium,
+                    color = if (automatic.phase == "CONFLICT") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
             }
             TodayNutritionOverview(
                 total, target, effectiveDietDayType(day), complete, secondary, dietDayBusy, dietDayError,

@@ -1,3 +1,29 @@
+# 1.4.0 自动云备份验收 / Automatic backup validation
+
+执行日期：2026-10-20（Asia/Shanghai）。版本 1.4.0 / versionCode 7；JDK 17、SDK 35，两个独立 Android 15 模拟器。云端写入均使用专门创建的合成测试账号，未操作实体手机或正常使用的 FoodLogTest 数据。
+
+| 检查 | 实际结果 |
+|---|---|
+| 构建、Lint | assembleDebug、assembleDebugAndroidTest、Lint 成功；0 errors，2 条已有 KTX 风格警告 |
+| 单元/数据库 | 128 项通过、0 失败；新增 18 项自动队列/恢复/差异测试和 2 项原子提交传输测试 |
+| 本地仪器回归 | 整套 27 个用例：24 通过，3 个显式参数云测试按默认设置跳过，无失败 |
+| 自动上传 | A 登录后自动上传 2 顿合成餐食、身体记录和常用餐；再次修改后生成新的成功快照，无手动备份调用 |
+| 离线/进程恢复 | A 飞行模式下写入记录，结束进程，再联网重新打开，待传记录自动上云；独立 offline/verify 两次仪器运行通过 |
+| 新设备恢复 | B 空白安装后登录相同账号，自动恢复餐食、体重、常用餐；恢复前保护文件可解析，退出后本机内容保留 |
+| 实际登录界面 | B 在设置输入合成账号密码并登录，自动恢复记录；不点击手动备份或恢复按钮，独立 Compose 云界面测试通过 |
+| 网络探测兼容 | B 可访问国内云网关而系统联网验证未通过；应用进程内 HTTPS 检查仍完成自动恢复，持久化 WorkManager 继续作为后台调度 |
+| 云端并发 | 两轮真实并行 compare-and-append 均仅一方成功，另一方报告差异；成功 UUID 重试不重复新增；匿名 RPC 被拒绝 |
+| 覆盖升级 | 1.3.0（code 6）→ 1.4.0（code 7），同签名升级与重启后逐表内容一致，Room 仍为 v2；含 2 餐食、4 身体记录、1 常用餐及配额/来源数据 |
+| 其他 | 4 项 Python 转换测试通过；APK 签名与历史版本一致；已检查新版设置截图 |
+
+AUTH/PG/STORAGE 语义复审：应用无管理员凭据，工作任务仅带 UID/登录代次；恢复锁内核对身份与修订号；新提交函数 SECURITY INVOKER 受原有用户 RLS 约束，历史快照无用户覆盖/删除权限。合成测试的 7 个对象、5 条清单及临时账号均已清理，临时清理权限已撤销；原有用户备份保持不变。
+
+开发中发现并修复了首次创建备份目录、种子库识别和 Android 网络验证与实际可达性不一致的问题；以上结论使用修复后的构建。实体 vivo 手机、其他厂商后台限制、磁盘耗尽和硬件断电仍未验证。强行停止可能延迟后台任务，重新打开会继续检查；并发差异需用户选择，不自动合并。此次合成升级测试不能代替此前手机餐食异常的原始导出文件排查。
+
+**English:** Version 1.4.0 passed 128 unit/database tests, build/Lint checks (zero errors, two existing style warnings), 24 ordinary instrumentation cases and four Python conversion tests. Three opt-in cloud cases were skipped in the default 27-case suite. Five separate real-cloud instrumentation runs verified automatic upload, offline save, process-restart catch-up, pristine second-device restore and actual Settings login/restore. Two concurrent cloud races each produced exactly one successful append, with idempotent retry and anonymous denial. A code 6→7 same-signature upgrade preserved all business tables. Synthetic cloud files, manifests, account and temporary cleanup policy were removed. Physical phones, vendor background policies and hardware failure scenarios remain outside the tested scope.
+
+---
+
 # 1.3.0 账号与云备份验收 / Cloud backup validation
 
 执行日期：2026-10-19（Asia/Shanghai）。版本 1.3.0 / versionCode 6，JDK 17、SDK 35；两个独立 Android 15 测试模拟器。所有云端上传均为合成数据，未上传用户的真实记录。未操作用户正常使用的模拟器或实体手机数据。

@@ -13,6 +13,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.semantics
@@ -32,6 +36,21 @@ class MainActivity: ComponentActivity() {
     val tab by vm.tab.collectAsStateWithLifecycle()
     val date by vm.selectedDate.collectAsStateWithLifecycle()
     val editor by vm.editor.collectAsStateWithLifecycle()
+    val cloud: CloudBackupViewModel = viewModel()
+    val transfer: TransferViewModel = viewModel()
+    val cloudBusy by cloud.busy.collectAsStateWithLifecycle()
+    val transferBusy by transfer.busy.collectAsStateWithLifecycle()
+    val transferTask by transfer.task.collectAsStateWithLifecycle()
+    val app = LocalContext.current.applicationContext as FoodLogApplication
+    val owner = LocalLifecycleOwner.current
+    val interactionBusy = editor != null || cloudBusy || transferBusy || transferTask != null
+    SideEffect { app.automaticBackup.interactiveBusy = interactionBusy }
+    LaunchedEffect(interactionBusy) { if (!interactionBusy) app.automaticBackup.kick() }
+    DisposableEffect(owner) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_START) app.automaticBackup.kick() }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer); app.automaticBackup.interactiveBusy = false }
+    }
     val snackbar=remember{SnackbarHostState()}
     val isDark=dark?:isSystemInDarkTheme()
     val view=LocalView.current

@@ -68,6 +68,29 @@ class CloudBackupClient internal constructor(
     }
 
     suspend fun upload(identity: CloudIdentity, record: CloudBackupRecord, file: File): CloudBackupRecord {
+        prepareObject(identity, record, file)
+        return publishRecord(identity, record)
+    }
+
+    /** Null means another device advanced the cloud head. Existing snapshots are never replaced. */
+    suspend fun uploadAutomatic(identity: CloudIdentity, record: CloudBackupRecord, file: File, expectedHead: String?): CloudBackupRecord? {
+        require(expectedHead == null || UUID.fromString(expectedHead).toString() == expectedHead)
+        prepareObject(identity, record, file)
+        val encoded = json.encodeToJsonElement(record).jsonObject
+        val response = request(identity, "POST", "/v1/rdb/rest/rpc/foodlog_commit_backup", buildJsonObject {
+            put("payload", JsonObject(encoded.filterKeys { it != "owner_id" && it != "created_at" }))
+            put("expected_head", expectedHead?.let(::JsonPrimitive) ?: JsonNull)
+        }) as? JsonObject ?: throw CloudException("云服务未确认自动备份，请稍后重试")
+        return when (response["status"]?.jsonPrimitive?.contentOrNull) {
+            "conflict" -> null
+            "saved" -> parseRecords(JsonArray(listOf(response["record"] ?: JsonNull)), identity).single().also {
+                ensureSameMetadata(record, it)
+            }
+            else -> throw CloudException("云服务未确认自动备份，请稍后重试")
+        }
+    }
+
+    private suspend fun prepareObject(identity: CloudIdentity, record: CloudBackupRecord, file: File) {
         requireIdentity(identity)
         validateRecord(record, identity, fromServer = false)
         verifyFile(identity, record, file)
@@ -87,6 +110,9 @@ class CloudBackupClient internal constructor(
             }
         }
         requireIdentity(identity)
+    }
+
+    private suspend fun publishRecord(identity: CloudIdentity, record: CloudBackupRecord): CloudBackupRecord {
         val encoded = json.encodeToJsonElement(record).jsonObject
         val insert = JsonObject(encoded.filterKeys { it != "owner_id" && it != "created_at" })
         try {
