@@ -23,6 +23,8 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
 
 @Composable fun SettingsScreen(vm: AppViewModel, data: Dataset, transfer: TransferViewModel = viewModel(), cloud: CloudBackupViewModel = viewModel()) {
     var profile by rememberSaveable { mutableStateOf(false) }
+    var diagnostics by rememberSaveable { mutableStateOf(false) }
+    var recoveryHistory by rememberSaveable { mutableStateOf(false) }
     var libraryDialog by rememberSaveable { mutableStateOf(false) }
     var libraryExpanded by rememberSaveable { mutableStateOf(false) }
     var selected by rememberSaveable(stateSaver = StringSetSaver) { mutableStateOf(emptySet<String>()) }
@@ -30,6 +32,8 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
     val dark by vm.dark.collectAsState()
     val task by transfer.task.collectAsState()
     val incoming by transfer.incoming.collectAsState()
+    val difference by transfer.difference.collectAsState()
+    val automatic by cloud.automaticStatus.collectAsState()
     val busy by transfer.busy.collectAsState()
     val transferError by transfer.error.collectAsState()
     val cloudBlocking by cloud.blockLocalTransfer.collectAsState()
@@ -69,11 +73,13 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
             OutlinedButton(onClick = { vm.tab(3) }, modifier = Modifier.fillMaxWidth()) { Text("配额与每日标签") }
         }
         CloudBackupSection(vm, data, cloud, transfer)
+        OutlinedButton(onClick = { diagnostics = true }, modifier = Modifier.fillMaxWidth()) { Text("数据诊断") }
         Section("本地备份与恢复", "完整备份可另存电脑，不依赖账号或云服务有效期。建议定期导出。") {
             Text("最近完整导出：${data.meta.lastExport?.let { java.time.Instant.parse(it).atZone(ZoneId.of(data.meta.timezone)).toLocalDateTime().toString().replace('T', ' ') } ?: "尚未导出"}", style = MaterialTheme.typography.bodySmall)
             Button(enabled = canStart, onClick = { transfer.prepareExport("食记_完整备份_${LocalDate.now(ZoneId.of(data.meta.timezone))}.foodlog.gz") }, modifier = Modifier.fillMaxWidth()) { Text("导出完整备份") }
             OutlinedButton(enabled = canStart, onClick = { transfer.prepareImport("FULL_BACKUP") }, modifier = Modifier.fillMaxWidth()) { Text("从完整备份恢复…") }
             TextButton(enabled = canStart, onClick = { transfer.prepareExport("食记_恢复前备份.foodlog.gz", recovery = true) }, modifier = Modifier.fillMaxWidth()) { Text("取出最近的恢复前自动备份") }
+            OutlinedButton(enabled = canStart, onClick = { recoveryHistory = true }, modifier = Modifier.fillMaxWidth()) { Text("历史保护副本") }
         }
         OutlinedButton(onClick = { libraryExpanded = !libraryExpanded }, modifier = Modifier.fillMaxWidth().heightIn(min=48.dp)) { Text(if(libraryExpanded) "收起食品库与旧数据" else "食品库与旧数据") }
         if(libraryExpanded) Section("分享与迁移") {
@@ -92,6 +98,8 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
         }
     }
     if (profile) ProfileDialog(vm, data) { profile = false }
+    if (diagnostics) DataInspectionDialog(vm, data, automatic.detail, automatic.lastBackupAt) { diagnostics = false }
+    if (recoveryHistory) RecoveryHistoryDialog(vm, transfer, data.meta.timezone) { recoveryHistory = false }
     if (libraryDialog) FormDialog("选择要分享的食品", confirm = "导出所选食品", error = libraryError, dismiss = { libraryDialog = false }, save = {
         if (selected.isEmpty()) libraryError = "请至少选择一种食品"
         else { transfer.prepareExport("食记_食品库.foodlog.gz", library = true, selected = selected); libraryDialog = false }
@@ -113,7 +121,16 @@ private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
                 if (dates.isNotEmpty()) Text("${dates.first()} 至 ${dates.last()}", style = MaterialTheme.typography.bodySmall)
                 Text("份量待补 ${parsed.meals.sumOf { m -> m.items.count { it.quantity == null } }} 项", style = MaterialTheme.typography.bodySmall)
                 when (parsed.kind) {
-                    "FULL_BACKUP" -> Text("恢复将替换当前全部数据。提交前自动保存本机恢复前备份，可在设置中取出。", color = MaterialTheme.colorScheme.primary)
+                    "FULL_BACKUP" -> {
+                        difference?.let { RestoreDifferenceSummary(it) }
+                        Text("恢复将替换当前全部数据。提交前自动保存本机恢复前备份，可在设置中取出。", color = MaterialTheme.colorScheme.primary)
+                        active.recoveryName?.let { name ->
+                            TextButton(enabled = !busy, onClick = {
+                                transfer.cancel()
+                                transfer.prepareExport("食记_$name", recoveryName = name)
+                            }) { Text("仅导出这份保护副本") }
+                        }
+                    }
                     "FOOD_LIBRARY" -> {
                         val newFoods = parsed.foods.count { food -> data.foods.none { it.id == food.id } }
                         val versionConflicts = parsed.versions.count { v -> data.versions.any { it.id == v.id && it != v } }

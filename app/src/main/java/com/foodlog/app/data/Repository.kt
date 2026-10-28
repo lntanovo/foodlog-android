@@ -346,6 +346,17 @@ class Repository(private val context: Context, val db: FoodLogDatabase) {
         recovery
     }
     fun latestRecovery(): File? = File(context.filesDir,"recovery").listFiles()?.filter { it.isFile && it.name.endsWith(".json.gz") }?.maxByOrNull{it.lastModified()}
+
+    fun recoveryFiles(): List<File> = File(context.filesDir, "recovery").listFiles()
+        ?.filter { it.isFile && it.name.endsWith(".json.gz") && it.canonicalFile.parentFile == File(context.filesDir, "recovery").canonicalFile }
+        ?.sortedWith(compareByDescending<File> { it.lastModified() }.thenByDescending { it.name }).orEmpty()
+
+    fun recoveryFile(name: String): File {
+        val directory = File(context.filesDir, "recovery").canonicalFile
+        return File(directory, name).also {
+            require(name == it.name && it.canonicalFile.parentFile == directory && it.isFile && name.endsWith(".json.gz")) { "保护副本不存在或路径无效" }
+        }
+    }
     fun conflicts(current: Dataset, incoming: Dataset): Set<String> {
         val old=current.origins.associateBy{it.namespace+":"+it.key}
         val changedEntities=incoming.origins.filter { o-> old[o.namespace+":"+o.key]?.let { it.fingerprint!=o.fingerprint }?:false }.map{it.entityId}.toSet()

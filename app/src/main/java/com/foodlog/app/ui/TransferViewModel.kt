@@ -9,6 +9,8 @@ import androidx.lifecycle.viewModelScope
 import com.foodlog.app.FoodLogApplication
 import com.foodlog.app.data.dataJson
 import com.foodlog.app.domain.Dataset
+import com.foodlog.app.domain.RestoreDifference
+import com.foodlog.app.domain.restoreDifference
 import com.foodlog.app.domain.uid
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +32,7 @@ data class TransferTask(
     val id: String = uid(), val operation: String, val expectedKind: String = "FULL_BACKUP",
     val path: String, val filename: String = "", val exportIsFull: Boolean = false,
     val stage: String, val uri: String? = null, val replacements: Set<String> = emptySet(),
-    val includePlans: Boolean = false
+    val includePlans: Boolean = false, val recoveryName: String? = null
 )
 
 class TransferViewModel(application: Application, private val saved: SavedStateHandle) : AndroidViewModel(application) {
@@ -40,6 +42,8 @@ class TransferViewModel(application: Application, private val saved: SavedStateH
     private val journal = File(directory, "active.json")
     val task = MutableStateFlow(readTask())
     val incoming = MutableStateFlow<Dataset?>(null)
+    val previewLocal = MutableStateFlow<Dataset?>(null)
+    val difference = MutableStateFlow<RestoreDifference?>(null)
     val busy = MutableStateFlow(false)
     val error = MutableStateFlow<String?>(null)
     val notices = Channel<String>(Channel.BUFFERED)
@@ -107,6 +111,8 @@ class TransferViewModel(application: Application, private val saved: SavedStateH
         saved.remove<String>("transferTaskId")
         task.value = null
         incoming.value = null
+        previewLocal.value = null
+        difference.value = null
         // Leftover payload files are harmless once there is no active journal.
         runCatching { File(directory, "active.json.new").delete() }
         previous?.let { runCatching { payload(it).delete(); File(directory, "${it.path}.partial").delete() } }
@@ -124,15 +130,16 @@ class TransferViewModel(application: Application, private val saved: SavedStateH
         }
     }
 
-    fun prepareExport(filename: String, library: Boolean = false, selected: Set<String> = emptySet(), recovery: Boolean = false) = runOperation {
+    fun prepareExport(filename: String, library: Boolean = false, selected: Set<String> = emptySet(), recovery: Boolean = false, recoveryName: String? = null) = runOperation {
         require(task.value == null) { "请先完成或取消当前文件操作" }
         val active = TransferTask(operation = "EXPORT", path = "${uid()}.foodlog.gz", filename = filename,
-            exportIsFull = !library && !recovery, stage = "PREPARING")
+            exportIsFull = !library && !recovery && recoveryName == null, stage = "PREPARING")
         update(active)
         try {
             withContext(Dispatchers.IO) {
-                if (recovery) {
-                    val source = repo.latestRecovery() ?: error("还没有恢复前自动备份")
+                if (recovery || recoveryName != null) {
+                    val source = recoveryName?.let(repo::recoveryFile) ?: repo.latestRecovery() ?: error("还没有恢复前自动备份")
+                    source.inputStream().use { repo.readBackup(it) }
                     source.inputStream().buffered().use { input ->
                         input.mark(2)
                         val gzip = input.read() == 0x1f && input.read() == 0x8b
@@ -150,6 +157,17 @@ class TransferViewModel(application: Application, private val saved: SavedStateH
         if (busy.value || task.value != null) return
         error.value = null
         updateSafely(TransferTask(operation = "IMPORT", expectedKind = kind, path = "${uid()}.incoming", stage = "IMPORT_READY"))
+    }
+
+    fun previewRecovery(name: String) = runOperation {
+        require(task.value == null) { "请先完成或取消当前文件操作" }
+        val active = TransferTask(operation = "IMPORT", path = "${uid()}.incoming", stage = "PREPARING", recoveryName = name)
+        update(active)
+        try {
+            withContext(Dispatchers.IO) { repo.recoveryFile(name).copyTo(payload(active)) }
+            loadPreview(active)
+            update(active.copy(stage = "PREVIEW"))
+        } catch (e: Exception) { clear(); throw e }
     }
 
     fun pickerLaunched(): Boolean {
@@ -213,6 +231,9 @@ class TransferViewModel(application: Application, private val saved: SavedStateH
     private suspend fun loadPreview(active: TransferTask) {
         val parsed = withContext(Dispatchers.IO) { payload(active).inputStream().use { repo.readBackup(it) } }
         require(parsed.kind == active.expectedKind) { "文件类型不符，请取消并使用对应的恢复、食品库或旧数据入口" }
+        val local = repo.snapshot()
+        difference.value = if (parsed.kind == "FULL_BACKUP") withContext(Dispatchers.Default) { restoreDifference(local, parsed) } else null
+        previewLocal.value = local
         incoming.value = parsed
     }
 
@@ -229,9 +250,22 @@ class TransferViewModel(application: Application, private val saved: SavedStateH
     fun applyImport() = runOperation {
         val active = task.value ?: error("导入任务已结束")
         val parsed = incoming.value ?: error("请等待预览读取完成")
+        if (parsed.kind == "FULL_BACKUP") {
+            val local = repo.snapshot()
+            val shown = previewLocal.value
+            if (shown == null || shown.meta.datasetId != local.meta.datasetId || shown.meta.revision != local.meta.revision) {
+                previewLocal.value = local
+                difference.value = withContext(Dispatchers.Default) { restoreDifference(local, parsed) }
+                error.value = "本机记录刚刚有变化，尚未恢复。请重新核对差异，再确认替换。"
+                return@runOperation
+            }
+        }
         update(active.copy(stage = "APPLYING"))
         try {
-            if (parsed.kind == "FULL_BACKUP") repo.restore(parsed)
+            if (parsed.kind == "FULL_BACKUP") {
+                val shown = requireNotNull(previewLocal.value)
+                repo.restore(parsed, shown.meta.datasetId, shown.meta.revision)
+            }
             else {
                 if (active.replacements.isNotEmpty()) repo.recoveryBackup()
                 repo.merge(parsed, active.replacements, active.includePlans)

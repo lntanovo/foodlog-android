@@ -5,9 +5,15 @@
 
 [中文](#中文) · [English](#english) · [下载 / Downloads](https://github.com/lntanovo/foodlog-android/releases) · [更新记录 / Changelog](CHANGELOG.md)
 
+[1.4.0 实现基线与开发交接 / Implementation baseline (中文)](docs/technical-implementation-1.4.0.zh-CN.md)
+
+1.4.1：新增数据诊断、历史保护副本与恢复差异预览，详见 [1.4.1 测试与交付记录](docs/testing-1.4.1.md)。
+
+1.4.1 adds diagnostics, recovery history and detailed restore comparisons. See [verification notes](docs/testing-1.4.1.md).
+
 ## 中文
 
-食记使用 Kotlin、Jetpack Compose 和 Room 构建，支持 **Android 8.0 及以上**。日常记录保存在设备上，无需登录；登录后可自动云备份、换设备取回记录。当前版本 **1.4.0**。
+食记使用 Kotlin、Jetpack Compose 和 Room 构建，支持 **Android 8.0 及以上**。日常记录保存在设备上，无需登录；登录后可自动云备份、换设备取回记录。当前版本 **1.4.1**。
 
 ### 能做什么
 
@@ -31,7 +37,8 @@
 
 | 版本 | 主要内容 | APK |
 | --- | --- | --- |
-| **[1.4.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.4.0)** | 自动云备份、联网重试、新设备自动恢复、差异保护 | **[下载最新版](https://github.com/lntanovo/foodlog-android/releases/download/v1.4.0/foodlog-1.4.0-debug.apk)** |
+| **[1.4.1](https://github.com/lntanovo/foodlog-android/releases/tag/v1.4.1)** | 数据诊断、历史保护副本、恢复差异与编辑保护 | **[下载最新版](https://github.com/lntanovo/foodlog-android/releases/download/v1.4.1/foodlog-1.4.1-debug.apk)** |
+| **[1.4.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.4.0)** | 自动云备份、联网重试、新设备自动恢复、差异保护 | **[下载已发布 1.4.0](https://github.com/lntanovo/foodlog-android/releases/download/v1.4.0/foodlog-1.4.0-debug.apk)** |
 | [1.3.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.3.0) | 可选账号、私有版本云备份、跨设备预览恢复、本机保护副本 | [APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.3.0/foodlog-1.3.0-debug.apk) |
 | [1.2.1](https://github.com/lntanovo/foodlog-android/releases/tag/v1.2.1) | 修复历史体重编辑截断趋势 | [下载 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.1/foodlog-1.2.1-debug.apk) |
 | [1.2.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.2.0) | 三日型配额、首页摄入／参考、界面整理 | [下载 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.0/foodlog-1.2.0-debug.apk) |
@@ -71,7 +78,7 @@ python tools/test_migrate.py
 
 macOS / Linux 使用 `./gradlew`。APK 生成在 `app/build/outputs/apk/debug/app-debug.apk`。
 
-1.4.0 已通过 **128 项单元与数据库测试**；离线重试、进程恢复、差异保护与旧版覆盖升级的具体范围见[验收记录](docs/testing.md)。
+1.4.1 通过 **137 项单元与数据库测试**、26 项设备测试（另 3 项真实云参数测试跳过），并验证 1.2.0 和 1.4.0 同签名覆盖升级保留业务数据。最终显示调整后另外复跑 2 项新增页面测试。范围与限制见 [1.4.1 验收记录](docs/testing-1.4.1.md)。
 
 历史版本 1.2.1 通过 65 项单元与数据库测试、3 组针对趋势的界面回归，验证从 1.2.0 覆盖升级保留记录。
 
@@ -85,7 +92,7 @@ macOS / Linux 使用 `./gradlew`。APK 生成在 `app/build/outputs/apk/debug/ap
 
 ## English
 
-FoodLog is a **native food diary for Android 8.0+**, built with Kotlin, Jetpack Compose and Room. Everyday records work offline; signing in enables automatic cloud backups and recovery on another device. Current version: **1.4.0**.
+FoodLog is a **native food diary for Android 8.0+**, built with Kotlin, Jetpack Compose and Room. Everyday records work offline; signing in enables automatic cloud backups and recovery on another device. Current version: **1.4.1**.
 
 ### Features
 
@@ -101,7 +108,8 @@ The screenshots above use a **synthetic 65 kg test plan**. These personal values
 
 ### Download and install
 
-- **[Download 1.4.0 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.4.0/foodlog-1.4.0-debug.apk)** — automatic backups, network retries, new-device recovery and conflict protection.
+- **[Download 1.4.1 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.4.1/foodlog-1.4.1-debug.apk)** — diagnostics, recovery history, detailed restore comparisons and protection against edits after preview.
+- [Download 1.4.0 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.4.0/foodlog-1.4.0-debug.apk) — automatic backups, network retries, new-device recovery and conflict protection.
 - [Download 1.2.1 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.1/foodlog-1.2.1-debug.apk) — fix historical weigh-ins changing the trend end date; clarify the displayed range and sample count.
 - [Download 1.2.0 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.2.0/foodlog-1.2.0-debug.apk) — day-type quotas, intake/reference display and a simpler interface.
 - [Download 1.1.0 APK](https://github.com/lntanovo/foodlog-android/releases/download/v1.1.0/foodlog-1.1.0-debug.apk) — reliability fixes, reusable meals, copy yesterday and compressed backups.
@@ -142,7 +150,7 @@ python tools/test_migrate.py
 
 On Windows use `.\gradlew.bat`. The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
-Version 1.4.0 passed **128 unit/database tests**. See the [test record](docs/testing.md) for automatic backup retry, interrupted-process recovery, conflict protection, live cloud and in-place upgrade checks.
+Version 1.4.1 passed **137 unit/database tests** and 26 device tests (3 parameter-gated live-cloud cases skipped), with verified data-preserving upgrades from 1.2.0 and 1.4.0. The final display adjustment also passed 2 targeted device tests. See the [1.4.1 test record](docs/testing-1.4.1.md) for scope and limitations.
 
 Historical version 1.2.1 passed 65 unit/database tests and 3 targeted trend UI groups, with a verified same-signature upgrade from 1.2.0.
 

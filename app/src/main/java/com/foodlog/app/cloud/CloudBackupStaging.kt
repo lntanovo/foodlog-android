@@ -60,6 +60,7 @@ data class CloudRestorePreview(
     val current: CloudDatasetSummary,
     val localDatasetId: String,
     val localRevision: Long,
+    val difference: com.foodlog.app.domain.RestoreDifference,
 ) {
     val incoming: CloudDatasetSummary get() = cloudSummary(backup)
 }
@@ -310,7 +311,8 @@ class CloudBackupEngine(
         val local = environment.snapshot()
         environment.requireIdentity(current)
         save(active.copy(stage = "PREVIEW", generation = current.generation))
-        preview.value = CloudRestorePreview(current, record, parsed, cloudSummary(local), local.meta.datasetId, local.meta.revision)
+        preview.value = CloudRestorePreview(current, record, parsed, cloudSummary(local), local.meta.datasetId, local.meta.revision,
+            com.foodlog.app.domain.restoreDifference(local, parsed))
         updateBlocking()
     }
 
@@ -324,8 +326,9 @@ class CloudBackupEngine(
         val local = environment.snapshot()
         environment.requireIdentity(shown.identity)
         if (local.meta.datasetId != shown.localDatasetId || local.meta.revision != shown.localRevision) {
-            preview.value = shown.copy(current = cloudSummary(local), localDatasetId = local.meta.datasetId, localRevision = local.meta.revision)
-            error.value = "本机记录刚刚有变化，尚未恢复。请重新核对数量，再确认替换。"
+            preview.value = shown.copy(current = cloudSummary(local), localDatasetId = local.meta.datasetId, localRevision = local.meta.revision,
+                difference = com.foodlog.app.domain.restoreDifference(local, incoming))
+            error.value = "本机记录刚刚有变化，尚未恢复。请重新核对数量和差异，再确认替换。"
             return@run
         }
         save(active.copy(stage = "APPLYING"))

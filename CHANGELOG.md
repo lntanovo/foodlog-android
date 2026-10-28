@@ -1,8 +1,23 @@
 # 更新记录 / Changelog
 
-每个版本都有 Git 标签、对应源码和独立 APK 下载。下列版本为本机开发测试签名构建。
+已发布版本有 Git 标签、对应源码和独立 APK 下载。下列版本为本机开发测试签名构建，历史版本继续保留。
 
-Every version has a Git tag, source snapshot and downloadable APK. These are development builds signed with the same local debug key.
+Published versions have Git tags, source snapshots and downloadable APKs. Previous releases remain available. These are development builds signed with the same local debug key.
+
+## [1.4.1](https://github.com/lntanovo/foodlog-android/releases/tag/v1.4.1)
+
+- 设置新增数据诊断，区分已吃与草稿，按日期查看历史数量，显示备份状态与本机数据集信息。
+- 可浏览全部恢复前保护副本，校验预览后导出指定副本或明确恢复；不自动清理旧副本。
+- 本地与云端恢复显示新增、移除、变更及餐食明细，同数量不同内容也能识别。
+- 本地恢复预览增加修订校验：期间出现新记录时刷新差异并要求重新确认；中断后仍需手动确认。
+- versionCode 8；保留原包名、签名链、Room v2 与备份格式 v3。
+- 此版本提供诊断与恢复辅助，尚未确认此前 vivo 餐食历史异常的根因。
+
+- Added local diagnostics with posted/draft counts, historical dates and backup state.
+- Browse, validate, preview and export any retained pre-restore recovery file without deleting older copies.
+- Review added, removed and changed records before local/cloud restores, including equal-count content changes.
+- Guard local restores against edits made after preview; interrupted restores return to explicit confirmation.
+- Version code 8; unchanged package, signing identity, Room v2 and backup schema v3. The previously reported vivo issue remains unconfirmed.
 
 ## [1.4.0](https://github.com/lntanovo/foodlog-android/releases/tag/v1.4.0)
 

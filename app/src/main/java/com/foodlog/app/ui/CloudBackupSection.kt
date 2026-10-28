@@ -181,6 +181,7 @@ fun CloudBackupSection(
                         "templates" to "常用餐", "origins" to "导入来源")
                         .filterKeys { (shown.incoming.counts[it] ?: 0) < (shown.current.counts[it] ?: 0) }.values
                     if (fewer.isNotEmpty()) Text("这份备份的${fewer.joinToString("、")}数量比本机少，请核对版本。", color = MaterialTheme.colorScheme.error)
+                    RestoreDifferenceSummary(shown.difference)
                     Text("恢复会替换当前全部记录，不会自动合并。确认前会先保存本机恢复前备份。", color = MaterialTheme.colorScheme.primary)
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())

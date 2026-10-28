@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.foodlog.app.domain.*
 import com.foodlog.app.data.dataJson
+import kotlinx.serialization.encodeToString
 import com.foodlog.app.ui.TransferTask
 import com.foodlog.app.ui.TransferViewModel
 import kotlinx.coroutines.runBlocking
@@ -99,5 +100,80 @@ class TransferViewModelTest {
         assertEquals(before.foods, application.repository.snapshot().foods)
         assertEquals(before.meals, application.repository.snapshot().meals)
         model.cancel()
+    }
+
+    @Test fun olderRecoveryCanBePreviewedAndExportedWithoutChangingCurrentRecords() = runBlocking {
+        val repo = application.repository
+        val original = repo.snapshot()
+        val older = repo.recoveryBackup()
+        repo.day(DayLog("2026-10-28"), BodyRecord("2026-10-28", "72"))
+        val newer = repo.recoveryBackup()
+        val current = repo.snapshot()
+        assertTrue(repo.recoveryFiles().containsAll(listOf(older, newer)))
+        val model = TransferViewModel(application, SavedStateHandle())
+        model.previewRecovery(older.name)
+        await("旧副本预览完成") { !model.busy.value }
+        assertNull(model.error.value)
+        assertEquals(original.bodies, model.incoming.value!!.bodies)
+        assertEquals(current.bodies, repo.snapshot().bodies)
+        model.cancel()
+        model.prepareExport("older.gz", recoveryName = older.name)
+        await("指定副本导出准备完成") { !model.busy.value }
+        val payload = File(application.filesDir, "transfers/${model.task.value!!.path}")
+        assertArrayEquals(older.readBytes(), payload.readBytes())
+        assertFalse(model.task.value!!.exportIsFull)
+        assertEquals(current.meta, repo.snapshot().meta)
+        model.cancel()
+    }
+
+    @Test fun corruptedRecoveryAndPathEscapeLeaveRecordsUntouched() = runBlocking {
+        val repo = application.repository
+        val before = repo.snapshot()
+        val file = File(application.filesDir, "recovery/broken.json.gz").apply { parentFile!!.mkdirs(); writeText("broken") }
+        val model = TransferViewModel(application, SavedStateHandle())
+        model.previewRecovery(file.name)
+        await("损坏副本应失败") { !model.busy.value }
+        assertNotNull(model.error.value); assertNull(model.incoming.value); assertNull(model.task.value)
+        assertTrue(file.exists())
+        assertTrue(runCatching { repo.recoveryFile("../outside.json.gz") }.isFailure)
+        assertEquals(before.meta, repo.snapshot().meta)
+    }
+
+    @Test fun editsAfterLocalPreviewRequireReconfirmationAndProtectionCopy() = runBlocking {
+        val repo = application.repository
+        val backup = repo.recoveryBackup()
+        val model = TransferViewModel(application, SavedStateHandle())
+        model.previewRecovery(backup.name)
+        await("预览完成") { !model.busy.value }
+        repo.day(DayLog("2026-10-28"), BodyRecord("2026-10-28", "73"))
+        val edited = repo.snapshot()
+        model.applyImport()
+        await("过期预览拒绝") { !model.busy.value }
+        assertTrue(model.error.value!!.contains("重新核对"))
+        assertEquals(edited.bodies, repo.snapshot().bodies)
+        assertEquals(edited.meta, model.previewLocal.value!!.meta)
+        model.applyImport()
+        await("重新确认恢复") { !model.busy.value }
+        assertNull(model.error.value)
+        assertTrue(repo.snapshot().bodies.isEmpty())
+        assertEquals(edited.bodies, repo.latestRecovery()!!.inputStream().use { repo.readBackup(it) }.bodies)
+    }
+
+    @Test fun interruptedApplyingReloadsPreviewAndNeverOverwritesNewEdits() = runBlocking {
+        val repo = application.repository
+        val backup = repo.recoveryBackup()
+        val first = TransferViewModel(application, SavedStateHandle())
+        first.previewRecovery(backup.name)
+        await("预览完成") { !first.busy.value }
+        val active = first.task.value!!
+        File(application.filesDir, "transfers/active.json").writeText(dataJson.encodeToString(active.copy(stage = "APPLYING")))
+        repo.day(DayLog("2026-10-28"), BodyRecord("2026-10-28", "74"))
+        val rebuilt = TransferViewModel(application, SavedStateHandle())
+        await("中断恢复回到预览") { !rebuilt.busy.value }
+        assertTrue(rebuilt.error.value!!.contains("中断"))
+        assertEquals("PREVIEW", rebuilt.task.value!!.stage)
+        assertEquals("74", repo.snapshot().bodies.single().weight)
+        assertEquals(repo.snapshot().meta, rebuilt.previewLocal.value!!.meta)
+        rebuilt.cancel()
     }
 }

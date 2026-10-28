@@ -103,6 +103,8 @@ class CloudBackupEngineTest {
         assertTrue(engine.error.value!!.contains("本机记录刚刚有变化"))
         assertEquals(2, environment.local.bodies.size)
         assertEquals(2, engine.preview.value!!.current.counts["bodies"])
+        assertEquals(1, engine.preview.value!!.difference.removed)
+        assertTrue(engine.preview.value!!.difference.records.single().before!!.contains("2026-10-19"))
         assertEquals(0, environment.restoreCalls)
         engine.restore(); done()
         assertNull(engine.error.value)
